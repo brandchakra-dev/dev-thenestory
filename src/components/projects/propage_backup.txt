@@ -1,0 +1,855 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import Image from "next/image";
+
+import {
+  MapPin, Heart, BadgeCheck, ArrowRight, Search,
+  X, ChevronDown, ChevronUp, Grid3x3, List,
+  SlidersHorizontal, Sparkles, TrendingUp,
+  Home, Building2, Landmark, Trees, IndianRupee,
+  BedDouble, CheckCircle2, LayoutList, Filter,
+  DollarSign, Square, Calendar, Award, Star,
+  Settings, Sliders, RotateCcw
+} from "lucide-react";
+
+// ─── Types ───────────────────────────────────────────────
+type Status = "All" | "New Launch" | "Ready To Move" | "Under Construction";
+type SortKey = "default" | "price-low" | "price-high" | "newest";
+
+interface Project {
+  id: number;
+  title: string;
+  builder: string;
+  location: string;
+  city: string;
+  priceRaw: number;
+  price: string;
+  bhk: string;
+  status: "New Launch" | "Ready To Move" | "Under Construction";
+  image: string;
+  area: string;
+  tag?: string;
+  verified: boolean;
+  possession?: string;
+}
+
+// ─── Data ─────────────────────────────────────────────────
+const allProjects: Project[] = [
+  { id:1,  title:"Dasnac Jewel of Noida",   builder:"Dasnac",    location:"Sector 75, Noida",          city:"Noida",         priceRaw:1.89, price:"₹1.89 Cr - 12 Cr",   bhk:"3,4,5 BHK",  status:"New Launch",         image:"/property/sobha.webp",                          area:"2200–8500 sq.ft",  tag:"New",     verified:true,  possession:"Dec 2026" },
+  { id:2,  title:"Godrej Palm Retreat",      builder:"Godrej",    location:"Sector 150, Noida",         city:"Noida",         priceRaw:1.34, price:"₹1.34 Cr - 4.21 Cr", bhk:"2,3,4 BHK",  status:"Ready To Move",      image:"/property/godrej.jpg",                          area:"1450–3200 sq.ft",  tag:"Popular", verified:true,  possession:"Ready"    },
+  { id:3,  title:"ACE Golfshire",            builder:"ACE",       location:"Sector 150, Noida",         city:"Noida",         priceRaw:1.31, price:"₹1.31 Cr - 2.3 Cr",  bhk:"2,3 BHK",    status:"Ready To Move",      image:"/property/m3m.webp",                            area:"1200–2100 sq.ft",               verified:true,  possession:"Ready"    },
+  { id:4,  title:"Dasnac Westminster",       builder:"Dasnac",    location:"Sector 146, Noida",         city:"Noida",         priceRaw:12,   price:"₹12 Cr+",             bhk:"4,5 BHK",    status:"Under Construction", image:"/property/prestige-city-siddharth-vihar.webp",  area:"5500+ sq.ft",      tag:"Luxury",  verified:true,  possession:"Mar 2027" },
+  { id:5,  title:"M3M Golf Estate",          builder:"M3M",       location:"Sector 65, Gurugram",       city:"Gurugram",      priceRaw:2.5,  price:"₹2.5 Cr - 6 Cr",     bhk:"3,4 BHK",    status:"Under Construction", image:"/property/godrej.jpg",                          area:"1800–4200 sq.ft",  tag:"Premium", verified:true,  possession:"Jun 2027" },
+  { id:6,  title:"Sobha City",               builder:"Sobha",     location:"Sector 108, Gurugram",      city:"Gurugram",      priceRaw:1.8,  price:"₹1.8 Cr - 4 Cr",     bhk:"2,3,4 BHK",  status:"New Launch",         image:"/property/sobha.webp",                          area:"1350–3000 sq.ft",               verified:true,  possession:"Dec 2027" },
+  { id:7,  title:"CRC Joyous",               builder:"CRC",       location:"Noida Extension",           city:"Greater Noida", priceRaw:1.3,  price:"₹1.3 Cr - 2.8 Cr",   bhk:"2,3 BHK",    status:"Under Construction", image:"/property/prestige-city-siddharth-vihar.webp",  area:"1100–1950 sq.ft",               verified:true,  possession:"Sep 2026" },
+  { id:8,  title:"ATS Knightsbridge",        builder:"ATS",       location:"Sector 124, Noida",         city:"Noida",         priceRaw:4.5,  price:"₹4.5 Cr - 9 Cr",     bhk:"4,5 BHK",    status:"Ready To Move",      image:"/property/m3m.webp",                            area:"3800–7200 sq.ft",  tag:"Luxury",  verified:true,  possession:"Ready"    },
+  { id:9,  title:"Gaurs Siddhartham",        builder:"Gaurs",     location:"Siddharth Vihar, Ghzbd",    city:"Ghaziabad",     priceRaw:0.65, price:"₹65 L - 1.2 Cr",     bhk:"2,3 BHK",    status:"Ready To Move",      image:"/property/godrej.jpg",                          area:"900–1400 sq.ft",   tag:"Budget",  verified:true,  possession:"Ready"    },
+  { id:10, title:"Nirala Estate",            builder:"Nirala",    location:"Noida Extension",           city:"Greater Noida", priceRaw:0.72, price:"₹72 L - 1.4 Cr",     bhk:"2,3 BHK",    status:"Under Construction", image:"/property/sobha.webp",                          area:"950–1600 sq.ft",   tag:"Budget",  verified:false, possession:"Aug 2026" },
+  { id:11, title:"Prestige Primrose Hills",  builder:"Prestige",  location:"Sector 150, Noida",         city:"Noida",         priceRaw:1.9,  price:"₹1.9 Cr - 3.5 Cr",   bhk:"3,4 BHK",    status:"New Launch",         image:"/property/prestige-city-siddharth-vihar.webp",  area:"1650–2800 sq.ft",               verified:true,  possession:"Jul 2027" },
+  { id:12, title:"Signature Global City",    builder:"Signature", location:"Sector 37D, Gurugram",      city:"Gurugram",      priceRaw:0.95, price:"₹95 L - 1.8 Cr",     bhk:"2,3 BHK",    status:"New Launch",         image:"/property/m3m.webp",                            area:"1050–1750 sq.ft",               verified:true,  possession:"Nov 2026" },
+];
+
+// ─── Config ───────────────────────────────────────────────
+const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
+  "New Launch":         { bg:"bg-[#6B3A1F]/10 border border-[#6B3A1F]/20", text:"text-[#6B3A1F]",   dot:"bg-[#6B3A1F]"   },
+  "Ready To Move":      { bg:"bg-emerald-50 border border-emerald-200",     text:"text-emerald-700", dot:"bg-emerald-500" },
+  "Under Construction": { bg:"bg-amber-50 border border-amber-200",         text:"text-amber-700",   dot:"bg-amber-500"   },
+};
+
+const tagConfig: Record<string, { bg: string; color: string }> = {
+  "New":     { bg:"rgba(107,58,31,0.10)", color:"#6B3A1F" },
+  "Popular": { bg:"rgba(201,168,76,0.18)",color:"#8B6914" },
+  "Luxury":  { bg:"rgba(107,58,31,0.88)", color:"#E8D5B0" },
+  "Budget":  { bg:"rgba(5,150,105,0.12)", color:"#059669" },
+  "Premium": { bg:"rgba(59,130,246,0.12)",color:"#2563EB" },
+};
+
+// ─── Enhanced Filter Sections with Icons ──────────────────
+const filterSections = [
+  {
+    id: "city",
+    title: "City",
+    icon: <MapPin size={14} />,
+    options: ["All Cities","Noida","Gurugram","Greater Noida","Ghaziabad","Faridabad","Yamuna Expressway"],
+    color: "#6B3A1F"
+  },
+  {
+    id: "status",
+    title: "Property Status",
+    icon: <Calendar size={14} />,
+    options: ["All","New Launch","Ready To Move","Under Construction"],
+    color: "#C9A84C"
+  },
+  {
+    id: "budget",
+    title: "Budget",
+    icon: <IndianRupee size={14} />,
+    options: ["All Budgets","Under ₹1 Cr","₹1–2 Cr","₹2–5 Cr","₹5 Cr+"],
+    color: "#059669"
+  },
+  {
+    id: "bhk",
+    title: "BHK Configuration",
+    icon: <BedDouble size={14} />,
+    options: ["All BHK","1 BHK","2 BHK","3 BHK","4 BHK","5+ BHK"],
+    color: "#2563EB"
+  },
+  {
+    id: "type",
+    title: "Property Type",
+    icon: <Home size={14} />,
+    options: ["All Types","Flat / Apartment","Villa","Builder Floor","Plot","Penthouse"],
+    color: "#8B6914"
+  },
+  {
+    id: "amenities",
+    title: "Amenities",
+    icon: <Award size={14} />,
+    options: ["All Amenities","Swimming Pool","Gym","Park","Security","Club House"],
+    color: "#C9A84C"
+  },
+  {
+    id: "possession",
+    title: "Possession",
+    icon: <Calendar size={14} />,
+    options: ["All","Ready to Move","Within 1 Year","Within 2 Years","Within 3 Years"],
+    color: "#6B3A1F"
+  },
+];
+
+// ─── Premium Sidebar Filter Section ───────────────────────
+function SidebarSection({
+  section, value, onChange, index
+}: {
+  section: typeof filterSections[0];
+  value: string;
+  onChange: (v: string) => void;
+  index: number;
+}) {
+  const [open, setOpen] = useState(index < 3); // First 3 open by default
+
+  return (
+    <div className="border-b border-[#F0EAE2] last:border-b-0">
+      {/* Header with hover effect */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-4 px-5 transition-all duration-300
+          hover:bg-gradient-to-r hover:from-[#6B3A1F]/5 hover:to-transparent group"
+      >
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300
+              group-hover:scale-110 group-hover:shadow-lg"
+            style={{ 
+              background: `linear-gradient(135deg, ${section.color}15, ${section.color}05)`,
+              color: section.color,
+              border: `1px solid ${section.color}20`
+            }}
+          >
+            {section.icon}
+          </div>
+          <div className="flex flex-col items-start">
+            <span className="font-black text-xs tracking-[0.18em] uppercase" style={{ color: "#1C0F05" }}>
+              {section.title}
+            </span>
+            {value !== section.options[0] && (
+              <span className="text-[9px] font-semibold mt-0.5" style={{ color: section.color }}>
+                ✓ {value}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {value !== section.options[0] && (
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: section.color }} />
+          )}
+          {open
+            ? <ChevronUp size={14} className="transition-transform duration-300" style={{ color: "#6B3A1F" }} />
+            : <ChevronDown size={14} className="transition-transform duration-300" style={{ color: "#A8978A" }} />
+          }
+        </div>
+      </button>
+
+      {/* Options with animations */}
+      {open && (
+        <div className="px-5 pb-5 flex flex-col gap-1.5 animate-slide-down">
+          {section.options.map((opt, idx) => {
+            const isActive = value === opt;
+            return (
+              <button
+                key={opt}
+                onClick={() => onChange(opt)}
+                className="group flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-left 
+                  transition-all duration-300 hover:translate-x-1"
+                style={{
+                  background: isActive 
+                    ? `linear-gradient(135deg, ${section.color}12, ${section.color}08)`
+                    : "transparent",
+                  border: `1px solid ${isActive ? `${section.color}30` : "transparent"}`,
+                  boxShadow: isActive ? `0 4px 12px ${section.color}15` : "none",
+                }}
+              >
+                {/* Animated indicator */}
+                <div className="relative w-4 h-4 flex items-center justify-center">
+                  <span
+                    className={`absolute w-2 h-2 rounded-full transition-all duration-300 
+                      ${isActive ? 'scale-150' : 'scale-100'}`}
+                    style={{
+                      background: isActive 
+                        ? `linear-gradient(135deg, ${section.color}, ${section.color}CC)`
+                        : "rgba(107,58,31,0.15)",
+                      boxShadow: isActive ? `0 0 10px ${section.color}` : "none",
+                    }}
+                  />
+                  {isActive && (
+                    <span className="absolute w-4 h-4 rounded-full animate-ping opacity-30"
+                      style={{ background: section.color }}
+                    />
+                  )}
+                </div>
+                
+                <span
+                  className="text-xs font-semibold flex-1 transition-all duration-300"
+                  style={{ 
+                    color: isActive ? section.color : "#7A6858",
+                    fontWeight: isActive ? 700 : 600
+                  }}
+                >
+                  {opt}
+                </span>
+                
+                {isActive && (
+                  <CheckCircle2 
+                    size={14} 
+                    className="animate-scale-in"
+                    style={{ color: section.color }} 
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Project Card (List View — full details) ──────────────
+function ProjectCard({ project, view }: { project: Project; view: "grid" | "list" }) {
+  const [wished, setWished] = useState(false);
+  const cfg = statusConfig[project.status];
+  const tag = project.tag ? tagConfig[project.tag] : null;
+
+  /* ── LIST VIEW ── */
+  if (view === "list") {
+    return (
+      <div
+        className="group bg-white rounded-2xl overflow-hidden border border-[#EDE5DD] transition-all duration-500 cursor-pointer flex flex-col sm:flex-row hover:shadow-2xl hover:shadow-[#6B3A1F]/10 hover:-translate-y-1"
+        style={{ boxShadow: "0 4px 20px rgba(107,58,31,0.08)" }}
+      >
+        {/* Image */}
+        <div className="relative w-full sm:w-56 md:w-64 lg:w-72 h-48 sm:h-auto flex-shrink-0 overflow-hidden">
+          <img src={project.image} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+          {/* Status badge */}
+          <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold backdrop-blur-sm ${cfg.bg} ${cfg.text} shadow-lg`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} animate-pulse`} />
+            {project.status}
+          </div>
+
+          {/* Tag */}
+          {tag && project.tag && (
+            <div 
+              className="absolute bottom-3 left-3 px-3 py-1 rounded-full text-[10px] font-black shadow-lg"
+              style={{ background: tag.bg, color: tag.color }}
+            >
+              {project.tag}
+            </div>
+          )}
+
+          {/* Wishlist */}
+          <button
+            className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+            style={{ 
+              background: wished ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.25)",
+              backdropFilter: "blur(8px)",
+              border: wished ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(255,255,255,0.3)"
+            }}
+            onClick={e => { e.stopPropagation(); setWished(!wished); }}
+          >
+            <Heart size={14} style={{ color: wished ? "#ef4444" : "#fff", fill: wished ? "#ef4444" : "none" }} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
+          <div>
+            {/* Title + builder */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-[#1C0F05] text-lg leading-snug group-hover:text-[#6B3A1F] transition-colors duration-300 line-clamp-1">
+                  {project.title}
+                </h3>
+                <p className="text-xs font-semibold mt-1 flex items-center gap-1" style={{ color: "#B0A090" }}>
+                  <Building2 size={12} className="text-[#C9A84C]" />
+                  by {project.builder}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <p className="font-display font-black text-xl leading-tight text-[#1C0F05]">{project.price}</p>
+                <p className="text-[10px] font-bold mt-0.5 tracking-wide uppercase text-right" style={{ color: "#A8978A" }}>onwards</p>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="flex items-center gap-1.5 mb-3 mt-2">
+              <MapPin size={12} className="text-[#C9A84C] flex-shrink-0" />
+              <span className="text-sm font-medium text-[#7A6858]">{project.location}</span>
+            </div>
+
+            {/* Detail chips */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                { label: project.bhk,  icon: <BedDouble size={11} /> },
+                { label: project.area, icon: <LayoutList size={11} /> },
+                ...(project.possession ? [{ label: `Possession: ${project.possession}`, icon: <Calendar size={11} /> }] : []),
+              ].map(({ label, icon }) => (
+                <div
+                  key={label}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold
+                    bg-[#6B3A1F]/5 hover:bg-[#6B3A1F]/10 transition-colors duration-300"
+                >
+                  <span className="text-[#C9A84C]">{icon}</span>
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-[#F0EAE2]">
+            <div className="flex items-center gap-3">
+              {project.verified && (
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl">
+                  <BadgeCheck size={14} className="text-emerald-600" /> 
+                  Verified
+                </div>
+              )}
+            </div>
+            <button
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs 
+                transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group/btn
+                bg-gradient-to-r from-[#6B3A1F] to-[#3B1D0D] text-[#E8D5B0]"
+              style={{ boxShadow: "0 4px 15px rgba(107,58,31,0.3)" }}
+            >
+              View Details 
+              <ArrowRight size={12} className="transition-transform duration-300 group-hover/btn:translate-x-1" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── GRID VIEW ── */
+  return (
+    <div
+      className="group bg-white rounded-2xl overflow-hidden border border-[#EDE5DD] cursor-pointer 
+        transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#6B3A1F]/15"
+      style={{ boxShadow: "0 4px 20px rgba(107,58,31,0.06)" }}
+    >
+      <div className="relative h-48 overflow-hidden">
+        <img src={project.image} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-bold backdrop-blur-sm ${cfg.bg} ${cfg.text} shadow-lg`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} animate-pulse`} />
+          {project.status}
+        </div>
+        
+        {tag && project.tag && (
+          <div 
+            className="absolute top-3 right-9 px-3 py-1.5 rounded-full text-[9px] font-black shadow-lg"
+            style={{ background: tag.bg, color: tag.color }}
+          >
+            {project.tag}
+          </div>
+        )}
+        
+        <button 
+          className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+          style={{ 
+            background: wished ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.25)",
+            backdropFilter: "blur(8px)",
+            border: wished ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(255,255,255,0.3)"
+          }}
+          onClick={e => { e.stopPropagation(); setWished(!wished); }}
+        >
+          <Heart size={12} style={{ color: wished ? "#ef4444" : "#fff", fill: wished ? "#ef4444" : "none" }} />
+        </button>
+        
+        <div className="absolute bottom-3 left-3 right-3">
+          <p className="text-white font-black text-base drop-shadow-lg">{project.price}</p>
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <h3 className="font-display font-bold text-[#1C0F05] text-base leading-snug mb-1 line-clamp-1 group-hover:text-[#6B3A1F] transition-colors duration-300">
+          {project.title}
+        </h3>
+        <p className="text-[11px] font-semibold mb-2 flex items-center gap-1" style={{ color: "#B0A090" }}>
+          <Building2 size={10} className="text-[#C9A84C]" />
+          by {project.builder}
+        </p>
+        
+        <div className="flex items-center gap-1 mb-3">
+          <MapPin size={10} className="text-[#C9A84C] flex-shrink-0" />
+          <span className="text-xs truncate text-[#7A6858]">{project.location}</span>
+        </div>
+        
+        <div className="flex gap-1.5 mb-4">
+          <span className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-[#6B3A1F]/5 text-[#6B3A1F]">
+            {project.bhk}
+          </span>
+          <span className="text-[10px] font-semibold px-2.5 py-1.5 rounded-xl bg-[#6B3A1F]/5 text-[#6B3A1F]">
+            {project.area}
+          </span>
+        </div>
+        
+        <div className="flex items-center justify-between pt-3 border-t border-[#EDE5DD]">
+          {project.verified ? (
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+              <BadgeCheck size={11} className="text-emerald-600" />
+              Verified
+            </div>
+          ) : (
+            <span />
+          )}
+          <span className="flex items-center gap-1 text-[11px] font-bold text-[#6B3A1F] group-hover:gap-2 transition-all duration-300">
+            View Details 
+            <ArrowRight size={10} className="transition-transform duration-300 group-hover:translate-x-1" />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ProjectsPage ─────────────────────────────────────────
+export default function ProjectsPage() {
+  const [search,       setSearch]       = useState("");
+  const [cityFilter,   setCityFilter]   = useState("All Cities");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [budgetFilter, setBudgetFilter] = useState("All Budgets");
+  const [bhkFilter,    setBhkFilter]    = useState("All BHK");
+  const [typeFilter,   setTypeFilter]   = useState("All Types");
+  const [amenitiesFilter, setAmenitiesFilter] = useState("All Amenities");
+  const [possessionFilter, setPossessionFilter] = useState("All");
+  const [sortKey,      setSortKey]      = useState<SortKey>("default");
+  const [view,         setView]         = useState<"grid"|"list">("list");
+  const [mobileSidebar,setMobileSidebar]= useState(false);
+  const [showActiveFilters, setShowActiveFilters] = useState(true);
+
+  const filterValues: Record<string, string> = {
+    city: cityFilter, status: statusFilter,
+    budget: budgetFilter, bhk: bhkFilter, type: typeFilter,
+    amenities: amenitiesFilter, possession: possessionFilter,
+  };
+
+  const setFilterValue = (id: string, val: string) => {
+    if (id === "city")   setCityFilter(val);
+    if (id === "status") setStatusFilter(val);
+    if (id === "budget") setBudgetFilter(val);
+    if (id === "bhk")    setBhkFilter(val);
+    if (id === "type")   setTypeFilter(val);
+    if (id === "amenities") setAmenitiesFilter(val);
+    if (id === "possession") setPossessionFilter(val);
+  };
+
+  const hasFilters =
+    cityFilter !== "All Cities" || statusFilter !== "All" ||
+    budgetFilter !== "All Budgets" || bhkFilter !== "All BHK" || 
+    typeFilter !== "All Types" || amenitiesFilter !== "All Amenities" ||
+    possessionFilter !== "All";
+
+  const clearAll = () => {
+    setCityFilter("All Cities"); setStatusFilter("All");
+    setBudgetFilter("All Budgets"); setBhkFilter("All BHK");
+    setTypeFilter("All Types"); setAmenitiesFilter("All Amenities");
+    setPossessionFilter("All"); setSearch("");
+  };
+
+  // Get active filters count
+  const activeFiltersCount = [
+    cityFilter !== "All Cities", statusFilter !== "All",
+    budgetFilter !== "All Budgets", bhkFilter !== "All BHK",
+    typeFilter !== "All Types", amenitiesFilter !== "All Amenities",
+    possessionFilter !== "All"
+  ].filter(Boolean).length;
+
+  const filtered = useMemo(() => {
+    let list = [...allProjects];
+    if (search)                         list = list.filter(p => [p.title, p.location, p.builder].some(f => f.toLowerCase().includes(search.toLowerCase())));
+    if (cityFilter !== "All Cities")    list = list.filter(p => p.city === cityFilter);
+    if (statusFilter !== "All")         list = list.filter(p => p.status === statusFilter);
+    if (bhkFilter !== "All BHK")        list = list.filter(p => p.bhk.includes(bhkFilter.replace(" BHK", "")));
+    if (budgetFilter === "Under ₹1 Cr") list = list.filter(p => p.priceRaw < 1);
+    if (budgetFilter === "₹1–2 Cr")     list = list.filter(p => p.priceRaw >= 1 && p.priceRaw < 2);
+    if (budgetFilter === "₹2–5 Cr")     list = list.filter(p => p.priceRaw >= 2 && p.priceRaw < 5);
+    if (budgetFilter === "₹5 Cr+")      list = list.filter(p => p.priceRaw >= 5);
+    if (sortKey === "price-low")        list.sort((a, b) => a.priceRaw - b.priceRaw);
+    if (sortKey === "price-high")       list.sort((a, b) => b.priceRaw - a.priceRaw);
+    return list;
+  }, [search, cityFilter, statusFilter, budgetFilter, bhkFilter, sortKey]);
+
+  return (
+    <div className="min-h-screen py-20" style={{ background: "hsl(40,40%,97%)" }}>
+
+      {/* ══ BODY: 2-COLUMN LAYOUT ══ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-8">
+        <div className="flex gap-6 lg:gap-8 items-start">
+
+          {/* ════ LEFT SIDEBAR — PREMIUM FILTERS ════ */}
+          <aside
+            className="hidden lg:flex flex-col flex-shrink-0 rounded-2xl overflow-hidden sticky top-16 w-72"
+            style={{
+              background: "#fff",
+              border: "1px solid #EDE5DD",
+              boxShadow: "0 8px 32px rgba(107,58,31,0.12)",
+            }}
+          >
+            {/* Sidebar header with gradient */}
+            <div
+              className="px-5 py-5"
+              style={{
+                background: "linear-gradient(135deg, #6B3A1F08, #C9A84C05)",
+                borderBottom: "1px solid #F0EAE2"
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: "linear-gradient(135deg, #6B3A1F, #3B1D0D)",
+                      boxShadow: "0 4px 15px rgba(107,58,31,0.3)"
+                    }}
+                  >
+                    <Filter size={16} className="text-[#E8D5B0]" />
+                  </div>
+                  <div>
+                    <span className="font-black text-base block" style={{ color: "#1C0F05" }}>Filters</span>
+                    <span className="text-[10px] font-semibold" style={{ color: "#A8978A" }}>
+                      {activeFiltersCount} active {activeFiltersCount === 1 ? 'filter' : 'filters'}
+                    </span>
+                  </div>
+                </div>
+                {hasFilters && (
+                  <button 
+                    onClick={clearAll} 
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold
+                      hover:bg-[#6B3A1F]/10 transition-all duration-300 group"
+                    style={{ color: "#6B3A1F" }}
+                  >
+                    <RotateCcw size={12} className="transition-transform duration-300 group-hover:-rotate-180" />
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Active filter chips */}
+              {hasFilters && showActiveFilters && (
+                <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-[#F0EAE2]">
+                  {cityFilter !== "All Cities" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-[#6B3A1F]/10 text-[#6B3A1F]">
+                      {cityFilter} <X size={8} className="cursor-pointer hover:text-red-500" onClick={() => setCityFilter("All Cities")} />
+                    </span>
+                  )}
+                  {statusFilter !== "All" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-[#C9A84C]/10 text-[#8B6914]">
+                      {statusFilter} <X size={8} className="cursor-pointer hover:text-red-500" onClick={() => setStatusFilter("All")} />
+                    </span>
+                  )}
+                  {budgetFilter !== "All Budgets" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-emerald-50 text-emerald-600">
+                      {budgetFilter} <X size={8} className="cursor-pointer hover:text-red-500" onClick={() => setBudgetFilter("All Budgets")} />
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Filter sections */}
+            <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              {filterSections.map((section, index) => (
+                <SidebarSection
+                  key={section.id}
+                  section={section}
+                  value={filterValues[section.id]}
+                  onChange={val => setFilterValue(section.id, val)}
+                  index={index}
+                />
+              ))}
+            </div>
+
+            {/* Sidebar footer with apply button */}
+            <div className="p-5 border-t border-[#F0EAE2] bg-gradient-to-t from-[#6B3A1F]/5 to-transparent">
+              <button
+                onClick={clearAll}
+                className="w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-500 
+                  hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] group relative overflow-hidden"
+                style={{
+                  background: hasFilters 
+                    ? "linear-gradient(135deg, #6B3A1F, #3B1D0D)"
+                    : "rgba(107,58,31,0.07)",
+                  color: hasFilters ? "#E8D5B0" : "#A8978A",
+                  boxShadow: hasFilters ? "0 8px 25px rgba(107,58,31,0.3)" : "none",
+                }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {hasFilters ? (
+                    <>
+                      Show {filtered.length} Results
+                      <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
+                    </>
+                  ) : (
+                    "No Filters Applied"
+                  )}
+                </span>
+                {hasFilters && (
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent 
+                    -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                )}
+              </button>
+            </div>
+          </aside>
+
+          {/* ════ RIGHT — SEARCH + SORT + CARDS ════ */}
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
+
+            {/* Search + Sort + View row */}
+            <div
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 rounded-2xl bg-white"
+              style={{ border: "1px solid #EDE5DD", boxShadow: "0 4px 20px rgba(107,58,31,0.06)" }}
+            >
+              {/* Search */}
+              <div className="relative flex-1 group">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A8978A] 
+                  transition-all duration-300 group-focus-within:text-[#6B3A1F]" />
+                <input
+                  type="text"
+                  placeholder="Search project, builder or location…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 text-sm rounded-xl outline-none transition-all duration-300
+                    focus:ring-2 focus:ring-[#6B3A1F]/20 focus:border-[#6B3A1F]"
+                  style={{ 
+                    background: "hsl(38,45%,97%)", 
+                    border: "1px solid #EDE5DD",
+                    color: "#1C0F05"
+                  }}
+                />
+                {search && (
+                  <button 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[#6B3A1F]/10 transition-all duration-300"
+                    onClick={() => setSearch("")}
+                  >
+                    <X size={12} style={{ color: "#A8978A" }} />
+                  </button>
+                )}
+              </div>
+
+              {/* Sort */}
+              <div className="relative flex-shrink-0">
+                <select
+                  className="appearance-none pl-4 pr-10 py-3 rounded-xl text-xs font-bold outline-none cursor-pointer
+                    transition-all duration-300 hover:shadow-md focus:ring-2 focus:ring-[#6B3A1F]/20"
+                  style={{ 
+                    background: "hsl(38,45%,97%)", 
+                    border: "1px solid #EDE5DD",
+                    color: "#6B3A1F",
+                    minWidth: "140px"
+                  }}
+                  value={sortKey}
+                  onChange={e => setSortKey(e.target.value as SortKey)}
+                >
+                  <option value="default">✨ Relevance</option>
+                  <option value="price-low">💰 Price: Low to High</option>
+                  <option value="price-high">💰 Price: High to Low</option>
+                  <option value="newest">🆕 Newest First</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#6B3A1F]" />
+              </div>
+
+              {/* Mobile filter toggle */}
+              <button
+                className="lg:hidden inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-xs flex-shrink-0
+                  transition-all duration-300 hover:shadow-md active:scale-95 relative"
+                style={{ 
+                  background: "linear-gradient(135deg, #6B3A1F, #3B1D0D)",
+                  color: "#E8D5B0",
+                  boxShadow: "0 4px 15px rgba(107,58,31,0.2)"
+                }}
+                onClick={() => setMobileSidebar(true)}
+              >
+                <Filter size={14} />
+                Filters
+                {hasFilters && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-[9px] 
+                    font-bold text-white flex items-center justify-center animate-pulse">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+
+              {/* View toggle */}
+              <div className="flex items-center gap-1 p-1 rounded-xl flex-shrink-0 bg-[hsl(38,45%,97%)] border border-[#EDE5DD]">
+                {(["list","grid"] as const).map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className="p-2.5 rounded-lg transition-all duration-300 relative group"
+                    style={{
+                      background: view === v ? "#fff" : "transparent",
+                      boxShadow: view === v ? "0 2px 8px rgba(107,58,31,0.12)" : "none",
+                      color: view === v ? "#6B3A1F" : "#A8978A"
+                    }}
+                  >
+                    {v === "grid" ? <Grid3x3 size={16} /> : <List size={16} />}
+                    <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-bold opacity-0 
+                      group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap"
+                      style={{ color: "#A8978A" }}>
+                      {v === "grid" ? "Grid View" : "List View"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Result count with animation */}
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-[#1C0F05]">
+                  {filtered.length}
+                </span>
+                <span className="text-sm font-medium text-[#A8978A]">
+                  {filtered.length === 1 ? 'property' : 'properties'} found
+                </span>
+              </div>
+              {hasFilters && (
+                <button 
+                  onClick={clearAll} 
+                  className="text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                    hover:bg-[#6B3A1F]/10 transition-all duration-300 group"
+                  style={{ color: "#6B3A1F" }}
+                >
+                  <RotateCcw size={12} className="transition-transform duration-300 group-hover:-rotate-180" />
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            {/* Cards */}
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white rounded-2xl border border-[#EDE5DD]">
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-[#6B3A1F]/10 to-[#C9A84C]/10">
+                  <Search size={30} style={{ color: "#6B3A1F" }} />
+                </div>
+                <h3 className="font-display font-bold text-xl text-[#1C0F05] mb-2">No properties found</h3>
+                <p className="text-sm mb-8 max-w-md" style={{ color: "#A8978A" }}>
+                  We couldn't find any properties matching your criteria. Try adjusting your filters.
+                </p>
+                <button 
+                  onClick={clearAll} 
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm
+                    bg-gradient-to-r from-[#6B3A1F] to-[#3B1D0D] text-[#FAF6F0] 
+                    transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group"
+                  style={{ boxShadow: "0 8px 25px rgba(107,58,31,0.3)" }}
+                >
+                  <RotateCcw size={14} className="transition-transform duration-300 group-hover:-rotate-180" />
+                  Clear All Filters
+                </button>
+              </div>
+            ) : view === "list" ? (
+              <div className="flex flex-col gap-4 animate-fade-in">
+                {filtered.map(p => <ProjectCard key={p.id} project={p} view="list" />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 animate-fade-in">
+                {filtered.map(p => <ProjectCard key={p.id} project={p} view="grid" />)}
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
+
+      {/* ══ MOBILE SIDEBAR DRAWER — PREMIUM ══ */}
+      {mobileSidebar && (
+        <div className="fixed inset-0 z-50 lg:hidden animate-fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileSidebar(false)} />
+          <div
+            className="absolute left-0 top-0 bottom-0 w-80 overflow-y-auto rounded-r-2xl animate-slide-right"
+            style={{ 
+              background: "#fff",
+              boxShadow: "8px 0 40px rgba(0,0,0,0.2)",
+            }}
+          >
+            <div className="sticky top-0 z-10 bg-white px-5 py-5 border-b border-[#F0EAE2]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6B3A1F] to-[#3B1D0D] flex items-center justify-center">
+                    <Filter size={16} className="text-[#E8D5B0]" />
+                  </div>
+                  <div>
+                    <span className="font-black text-base block" style={{ color: "#1C0F05" }}>Filters</span>
+                    <span className="text-[10px] font-semibold" style={{ color: "#A8978A" }}>
+                      {activeFiltersCount} active {activeFiltersCount === 1 ? 'filter' : 'filters'}
+                    </span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setMobileSidebar(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#6B3A1F]/10 transition-all duration-300"
+                >
+                  <X size={18} style={{ color: "#A8978A" }} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5">
+              {filterSections.map((section, index) => (
+                <SidebarSection
+                  key={section.id}
+                  section={section}
+                  value={filterValues[section.id]}
+                  onChange={val => { setFilterValue(section.id, val); }}
+                  index={index}
+                />
+              ))}
+            </div>
+
+            <div className="sticky bottom-0 bg-white p-5 border-t border-[#F0EAE2]">
+              <button 
+                onClick={() => { setMobileSidebar(false); }}
+                className="w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-500 
+                  hover:-translate-y-1 hover:shadow-xl bg-gradient-to-r from-[#6B3A1F] to-[#3B1D0D] 
+                  text-[#E8D5B0] group relative overflow-hidden"
+                style={{ boxShadow: "0 8px 25px rgba(107,58,31,0.3)" }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  Show {filtered.length} Results
+                  <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
+                </span>
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent 
+                  -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

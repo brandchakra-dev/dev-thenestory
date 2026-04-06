@@ -1,0 +1,44 @@
+/* .featuredSwiper::before,
+.featuredSwiper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 80px;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.featuredSwiper::before {
+  left: 0;
+  background: linear-gradient(to right, white, transparent);
+}
+
+.featuredSwiper::after {
+  right: 0;
+  background: linear-gradient(to left, white, transparent);
+}
+
+
+.compareSwiper::before,
+.compareSwiper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 80px;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.compareSwiper::before {
+  left: 0;
+  background: linear-gradient(to right, white, transparent);
+}
+
+.compareSwiper::after {
+  right: 0;
+  background: linear-gradient(to left, white, transparent);
+}
+ */
+
