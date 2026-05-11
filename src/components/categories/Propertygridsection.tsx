@@ -38,9 +38,9 @@ type Card = PropertyCard | SponsoredCard;
 
 // ─── Static Images ────────────────────────────
 const STATIC_IMAGES = {
-  allProperties: "./home-category/properties.webp",
-  newProjects: "./home-category/projects.webp",
-  budget: "./home-category/homes.webp",
+  allProperties: "./home-category/all_properties.jpg",
+  newProjects: "./home-category/all_projects.jpg",
+  budget: "./home-category/home.jpg",
   sponsored: "./home-category/sponsered.webp",
 };
 
