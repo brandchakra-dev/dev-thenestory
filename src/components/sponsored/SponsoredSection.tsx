@@ -28,7 +28,7 @@ export default function SponsoredSection() {
 
         {/* ══ MAIN BANNER ══ */}
         <a
-          href="#"
+          href="https://elegantstories.in"
           className="group relative block w-full overflow-hidden cursor-pointer"
           style={{
             borderRadius: "20px",
@@ -140,7 +140,7 @@ export default function SponsoredSection() {
               {/* Brand name */}
               <div className="text-center">
                 <p style={{ fontSize: "clamp(7px, 0.8vw, 10px)", color: "rgba(232,213,176,0.4)", fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "4px" }}>
-                  Est. 2015
+                  Est. 2026
                 </p>
                 <h2
                   className="font-display font-black leading-[0.95] tracking-tight text-center"

@@ -114,15 +114,6 @@ export default function ToolsSection() {
       iconColor: "text-amber-600",
       bgLight:   "bg-amber-50",
     },
-    {
-      title: "Buy Ability",
-      desc:  "Discover the right home within your budget range.",
-      href:  "/tools/buy-ability",
-      icon:  "ability",
-      gradient:  "bg-gradient-to-r from-purple-400 to-pink-500",
-      iconColor: "text-purple-600",
-      bgLight:   "bg-purple-50",
-    },
   ];
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
 import {
@@ -12,15 +12,22 @@ import {
 
 import "swiper/css";
 
+import { videosApi } from "@/lib/api";
+
 // ─── Types ───────────────────────────────────────────────
 interface Video {
-  id: string;
+  _id: string;
   title: string;
-  views: string;
-  duration: string;
+  videoId: string;
+  description: string;
   category: string;
-  tag?: string;
-  date: string;
+  thumbnail: string;
+  duration: string;
+  views: number;
+  isEditorPick: boolean;
+  isFeatured: boolean;
+  tags: string[];
+  createdAt: string;
 }
 
 // ─── Data ────────────────────────────────────────────────
@@ -32,25 +39,6 @@ const categories = [
   { label: "Buyer's Guide",   icon: <BookOpen size={12} />   },
 ];
 
-const videos: Video[] = [
-  { id: "L2z70lLVVMY",      title: "Godrej Palm Retreat — Full Property Tour | Sector 150 Noida", views: "1.2L", duration: "12:34", category: "Property Tour",   tag: "Popular",    date: "Dec 2024" },
-  { id: "F760jAH67To",      title: "Top 5 Investment Hotspots in NCR 2024 | Expert Analysis",      views: "87K",  duration: "18:20", category: "Investment Tips", tag: "Trending",   date: "Nov 2024" },
-  { id: "CH2ts-nqwhQ",      title: "ACE Golfshire Launch — Sector 150 Noida Walkthrough",          views: "54K",  duration: "9:45",  category: "Property Tour",                      date: "Nov 2024" },
-  { id: "L2z70lLVVMY",      title: "Yamuna Expressway — Should You Invest in 2024?",               views: "1.1L", duration: "22:10", category: "Market Update",   tag: "Must Watch", date: "Oct 2024" },
-  { id: "mHxXjblKewg",      title: "First Time Home Buyer's Complete Guide — NCR 2024",            views: "2.3L", duration: "31:05", category: "Buyer's Guide",   tag: "Popular",    date: "Oct 2024" },
-  { id: "syVtCZHrNKg",      title: "Dasnac Westminster Tower — Luxury Penthouse Walkthrough",      views: "43K",  duration: "14:22", category: "Property Tour",                      date: "Sep 2024" },
-  { id: "sgtrIG73nsc",      title: "Greater Noida vs Noida Extension — Complete Comparison",       views: "98K",  duration: "16:48", category: "Market Update",   tag: "Trending",   date: "Sep 2024" },
-  { id: "0gcJCa4KAYcqIYzv", title: "RERA Rules Every Buyer Must Know Before Signing",              views: "1.8L", duration: "25:33", category: "Buyer's Guide",                      date: "Aug 2024" },
-  { id: "kJA8BJkk57g",      title: "Gurugram Sector 56 — Hidden Gem for Investors",               views: "61K",  duration: "11:19", category: "Investment Tips",                    date: "Aug 2024" },
-];
-
-const DEFAULT_HERO = {
-  id: "bbehxoGsut0",
-  title: "Delhi NCR Real Estate Market Report 2024 — Complete Analysis & Forecast",
-  views: "3.1L", duration: "45:12", date: "Dec 2024",
-  desc: "Deep dive into NCR's property trends, price movements across Noida, Gurugram, Faridabad & Ghaziabad with expert commentary.",
-};
-
 const tagStyle: Record<string, { bg: string; color: string }> = {
   "Popular":    { bg: "rgba(107,58,31,0.12)", color: "#6B3A1F"  },
   "Trending":   { bg: "rgba(201,168,76,0.18)", color: "#8B6914" },
@@ -58,11 +46,22 @@ const tagStyle: Record<string, { bg: string; color: string }> = {
   "New":        { bg: "rgba(5,150,105,0.11)",  color: "#059669" },
 };
 
-const thumb = (id: string, q: "maxresdefault" | "hqdefault" = "hqdefault") =>
-  `https://img.youtube.com/vi/${id}/${q}.jpg`;
+const thumb = (videoId: string, quality: "maxresdefault" | "hqdefault" = "hqdefault") =>
+  `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
 
 // ─── Small Video Row (Up Next panel) ─────────────────────
 function VideoRow({ video, active, onClick }: { video: Video; active: boolean; onClick: () => void }) {
+  const formatViews = (views: number) => {
+    if (views >= 100000) return `${(views / 100000).toFixed(1)}L`;
+    if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+    return views.toString();
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  };
+
   return (
     <div
       onClick={onClick}
@@ -76,8 +75,7 @@ function VideoRow({ video, active, onClick }: { video: Video; active: boolean; o
     >
       {/* Thumb */}
       <div className="relative flex-shrink-0 overflow-hidden rounded-lg" style={{ width: "80px", height: "52px" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={thumb(video.id)} alt={video.title} className="w-full h-full object-cover" />
+        <img src={thumb(video.videoId)} alt={video.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/20" />
         <div
           className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -98,9 +96,9 @@ function VideoRow({ video, active, onClick }: { video: Video; active: boolean; o
           {video.title}
         </p>
         <div className="flex items-center gap-2 mt-1">
-          <span style={{ fontSize: "9px", color: "#A8978A", fontWeight: 600 }}>{video.views} views</span>
+          <span style={{ fontSize: "9px", color: "#A8978A", fontWeight: 600 }}>{formatViews(video.views)} views</span>
           <span style={{ fontSize: "9px", color: "#C9A84C" }}>·</span>
-          <span style={{ fontSize: "9px", color: "#A8978A", fontWeight: 600 }}>{video.date}</span>
+          <span style={{ fontSize: "9px", color: "#A8978A", fontWeight: 600 }}>{formatDate(video.createdAt)}</span>
         </div>
       </div>
 
@@ -113,48 +111,10 @@ function VideoRow({ video, active, onClick }: { video: Video; active: boolean; o
   );
 }
 
-// ─── Slider VideoCard ─────────────────────────────────────
-function VideoCard({ video }: { video: Video }) {
-  const [hov, setHov] = useState(false);
-  const tag = video.tag ? tagStyle[video.tag] : null;
-
-  return (
-    <div
-      className="group bg-white rounded-2xl overflow-hidden cursor-pointer border border-[#EDE5DD] transition-all duration-300 hover:-translate-y-1"
-      style={{ boxShadow: "0 2px 12px rgba(107,58,31,0.07)" }}
-      onMouseEnter={e => { setHov(true); (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(107,58,31,0.14)"; (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(201,168,76,0.30)" }}
-      onMouseLeave={e => { setHov(false); (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 12px rgba(107,58,31,0.07)"; (e.currentTarget as HTMLDivElement).style.borderColor = "#EDE5DD" }}
-    >
-      <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={thumb(video.id)} alt={video.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex items-center justify-center rounded-full transition-all duration-300" style={{ width: hov ? "46px" : "38px", height: hov ? "46px" : "38px", background: hov ? "#FF0000" : "rgba(255,255,255,0.92)", boxShadow: hov ? "0 6px 22px rgba(255,0,0,0.45)" : "0 3px 12px rgba(0,0,0,0.22)" }}>
-            <Play size={hov ? 17 : 14} style={{ color: hov ? "#fff" : "#1C0F05", fill: hov ? "#fff" : "#1C0F05", marginLeft: "2px" }} />
-          </div>
-        </div>
-        <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded font-black text-[9px] text-white" style={{ background: "rgba(0,0,0,0.75)" }}>{video.duration}</div>
-        {tag && video.tag && (
-          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full font-black text-[8px]" style={{ background: tag.bg, color: tag.color }}>{video.tag}</div>
-        )}
-      </div>
-      <div className="p-3">
-        <p className="font-display font-bold text-[#1C0F05] text-xs leading-snug line-clamp-2 group-hover:text-[#6B3A1F] transition-colors mb-2">{video.title}</p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex items-center gap-1 text-[9px] font-semibold text-[#A8978A]"><Eye size={9} /> {video.views}</span>
-            <span className="flex items-center gap-1 text-[9px] font-semibold text-[#A8978A]"><Clock size={9} /> {video.duration}</span>
-          </div>
-          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(107,58,31,0.07)", color: "#6B3A1F" }}>{video.category}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Section ─────────────────────────────────────────
 export default function YoutubeSection() {
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
@@ -162,15 +122,53 @@ export default function YoutubeSection() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // ── Playlist search state ─────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const currentHero = activeIdx !== null ? videos[activeIdx] : DEFAULT_HERO;
+  // Fetch videos from API
+  useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        setLoading(true);
+        const response = await videosApi.getAll({ limit: 50 });
+        
+        let videosData = [];
+        if (response.videos) {
+          videosData = response.videos;
+        } else if (response.data) {
+          videosData = response.data;
+        } else if (Array.isArray(response)) {
+          videosData = response;
+        }
+        
+        setVideos(videosData);
+        
+        // Set first video as default if available
+        if (videosData.length > 0 && activeIdx === null) {
+          setActiveIdx(0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch videos:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchVideos();
+  }, []);
+
+  // Update active index when videos load
+  useEffect(() => {
+    if (videos.length > 0 && activeIdx === null) {
+      setActiveIdx(0);
+    }
+  }, [videos, activeIdx]);
+
+  const currentHero = activeIdx !== null && videos[activeIdx] ? videos[activeIdx] : videos[0];
+  const editorPickVideo = videos.find(v => v.isEditorPick) || videos[0];
 
   const handleUpNextClick = (idx: number) => {
-    // idx here refers to index in the FULL videos array
     setActiveIdx(idx);
     setIsPlaying(true);
   };
@@ -183,7 +181,38 @@ export default function YoutubeSection() {
       )
     : videos;
 
-  const filtered = activeCategory === "All" ? videos : videos.filter(v => v.category === activeCategory);
+  const filtered = activeCategory === "All" 
+    ? videos 
+    : videos.filter(v => v.category === activeCategory);
+
+  if (loading || videos.length === 0) {
+    return (
+      <section className="py-8 sm:py-6 lg:py-8" style={{ background: "hsl(40,40%,97%)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4" />
+            <div className="h-64 bg-gray-200 rounded-2xl mb-6" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-40 bg-gray-200 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const formatViews = (views: number) => {
+    if (views >= 100000) return `${(views / 100000).toFixed(1)}L`;
+    if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+    return views.toString();
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  };
 
   return (
     <section className="py-8 sm:py-6 lg:py-8" style={{ background: "hsl(40,40%,97%)" }}>
@@ -194,7 +223,7 @@ export default function YoutubeSection() {
           <div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-4" style={{ background: "rgba(255,0,0,0.07)", border: "1px solid rgba(255,0,0,0.14)" }}>
               <Youtube size={11} style={{ color: "#FF0000" }} />
-              <span style={{ fontSize: "9px", fontWeight: 900, letterSpacing: "0.24em", textTransform: "uppercase", color: "#cc0000" }}>YouTube · 500+ Videos</span>
+              <span style={{ fontSize: "9px", fontWeight: 900, letterSpacing: "0.24em", textTransform: "uppercase", color: "#cc0000" }}>YouTube · {videos.length}+ Videos</span>
             </div>
             <h2 className="font-display font-bold text-[#1C0F05] text-2xl sm:text-3xl lg:text-4xl leading-tight">
               Property Insights{" "}
@@ -219,12 +248,12 @@ export default function YoutubeSection() {
 
             {/* ── LEFT: Hero Player ── */}
             <div className="lg:col-span-7 relative">
-              {isPlaying ? (
+              {isPlaying && currentHero ? (
                 <iframe
-                  key={currentHero.id}
+                  key={currentHero.videoId}
                   className="w-full"
                   style={{ aspectRatio: "16/9", display: "block" }}
-                  src={`https://www.youtube.com/embed/${currentHero.id}?autoplay=1&rel=0`}
+                  src={`https://www.youtube.com/embed/${currentHero.videoId}?autoplay=1&rel=0`}
                   title={currentHero.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -235,11 +264,10 @@ export default function YoutubeSection() {
                   style={{ aspectRatio: "16/9" }}
                   onClick={() => setIsPlaying(true)}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    key={currentHero.id}
-                    src={thumb(currentHero.id, "maxresdefault")}
-                    alt={currentHero.title}
+                    key={currentHero?.videoId}
+                    src={thumb(currentHero?.videoId, "maxresdefault")}
+                    alt={currentHero?.title}
                     className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
                   />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(175deg, rgba(10,5,2,0) 30%, rgba(10,5,2,0.80) 100%)" }} />
@@ -248,16 +276,16 @@ export default function YoutubeSection() {
                       <Play size={28} style={{ color: "#fff", fill: "#fff", marginLeft: "3px" }} />
                     </div>
                   </div>
-                  <div className="absolute top-3 right-3 px-2 py-1 rounded font-black text-[11px] text-white" style={{ background: "rgba(0,0,0,0.72)" }}>{currentHero.duration}</div>
+                  <div className="absolute top-3 right-3 px-2 py-1 rounded font-black text-[11px] text-white" style={{ background: "rgba(0,0,0,0.72)" }}>{currentHero?.duration}</div>
                   <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
                     <div className="mb-1 h-[2px] w-8 rounded-full" style={{ background: "#C9A84C" }} />
                     <h3 className="font-display font-black text-white leading-snug line-clamp-2" style={{ fontSize: "clamp(0.85rem, 1.8vw, 1.2rem)" }}>
-                      {currentHero.title}
+                      {currentHero?.title}
                     </h3>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="flex items-center gap-1 text-xs font-semibold text-white/55"><Eye size={11} /> {currentHero.views}</span>
-                      <span className="flex items-center gap-1 text-xs font-semibold text-white/55"><Clock size={11} /> {currentHero.duration}</span>
-                      <span className="text-xs font-semibold text-white/55">{currentHero.date}</span>
+                      <span className="flex items-center gap-1 text-xs font-semibold text-white/55"><Eye size={11} /> {formatViews(currentHero?.views || 0)}</span>
+                      <span className="flex items-center gap-1 text-xs font-semibold text-white/55"><Clock size={11} /> {currentHero?.duration}</span>
+                      <span className="text-xs font-semibold text-white/55">{formatDate(currentHero?.createdAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -269,17 +297,15 @@ export default function YoutubeSection() {
                   <div className="flex-1">
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-2" style={{ background: "rgba(107,58,31,0.08)", border: "1px solid rgba(107,58,31,0.12)" }}>
                       <span style={{ fontSize: "8px", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6B3A1F" }}>
-                        {activeIdx !== null ? "▶ Now Playing" : "⭐ Editor's Pick"}
+                        {activeIdx !== null ? "▶ Now Playing" : (currentHero?.isEditorPick ? "⭐ Editor's Pick" : "Featured Video")}
                       </span>
                     </div>
                     <p className="text-xs font-medium leading-relaxed line-clamp-2" style={{ color: "#7A6858", maxWidth: "420px" }}>
-                      {"desc" in currentHero
-                        ? (currentHero as typeof DEFAULT_HERO).desc
-                        : currentHero.title}
+                      {currentHero?.description || currentHero?.title}
                     </p>
                   </div>
                   <a
-                    href={`https://youtube.com/watch?v=${currentHero.id}`}
+                    href={`https://youtube.com/watch?v=${currentHero?.videoId}`}
                     target="_blank" rel="noopener noreferrer"
                     className="flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all duration-200 hover:-translate-y-0.5"
                     style={{ background: "#FF0000", color: "#fff", boxShadow: "0 3px 12px rgba(255,0,0,0.28)" }}
@@ -387,11 +413,10 @@ export default function YoutubeSection() {
               <div className="flex-1 overflow-y-auto px-2 py-2" style={{ maxHeight: "300px" }}>
                 {playlistVideos.length > 0 ? (
                   playlistVideos.map((v, i) => {
-                    // find original index in full videos array for activeIdx tracking
-                    const originalIdx = videos.indexOf(v);
+                    const originalIdx = videos.findIndex(video => video._id === v._id);
                     return (
                       <VideoRow
-                        key={i}
+                        key={v._id}
                         video={v}
                         active={activeIdx === originalIdx}
                         onClick={() => handleUpNextClick(originalIdx)}
@@ -399,7 +424,6 @@ export default function YoutubeSection() {
                     );
                   })
                 ) : (
-                  /* Empty state */
                   <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
@@ -428,56 +452,8 @@ export default function YoutubeSection() {
           </div>
         </div>
 
-        {/* ══ CATEGORY TABS + SLIDER ══ */}
-        <div className="flex items-center gap-2 flex-wrap mb-5 hidden">
-          {categories.map(({ label, icon }) => (
-            <button
-              key={label}
-              onClick={() => setActiveCategory(label)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-xs transition-all duration-200 active:scale-[0.96]"
-              style={
-                activeCategory === label
-                  ? { background: "linear-gradient(135deg,#6B3A1F,#3B1D0D)", color: "#FAF6F0", boxShadow: "0 3px 12px rgba(107,58,31,0.26)" }
-                  : { background: "#fff", color: "#7A6858", border: "1px solid #EDE5DD" }
-              }
-            >
-              {icon} {label}
-            </button>
-          ))}
-          <span className="ml-auto text-[11px] font-semibold" style={{ color: "#A8978A" }}>{filtered.length} video{filtered.length !== 1 ? "s" : ""}</span>
-        </div>
-
-        <div className="relative hidden">
-          <button ref={prevRef} className="yt-slider-prev absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border border-[#EDE5DD] shadow-[0_2px_12px_rgba(107,58,31,0.12)] flex items-center justify-center text-[#6B5C4E] hover:bg-[#6B3A1F] hover:text-white hover:border-[#6B3A1F] hover:shadow-[0_4px_16px_rgba(107,58,31,0.30)] active:scale-90 transition-all duration-200">
-            <ChevronLeft size={18} />
-          </button>
-          <button ref={nextRef} className="yt-slider-next absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border border-[#EDE5DD] shadow-[0_2px_12px_rgba(107,58,31,0.12)] flex items-center justify-center text-[#6B5C4E] hover:bg-[#6B3A1F] hover:text-white hover:border-[#6B3A1F] hover:shadow-[0_4px_16px_rgba(107,58,31,0.30)] active:scale-90 transition-all duration-200">
-            <ChevronRight size={18} />
-          </button>
-          <Swiper
-            key={activeCategory}
-            modules={[Navigation, Autoplay]}
-            spaceBetween={16}
-            autoplay={{ delay: 4000, disableOnInteraction: false, pauseOnMouseEnter: true }}
-            navigation={{ nextEl: ".yt-slider-next", prevEl: ".yt-slider-prev" }}
-            breakpoints={{
-              0:    { slidesPerView: 1.15, spaceBetween: 12 },
-              480:  { slidesPerView: 1.7,  spaceBetween: 14 },
-              640:  { slidesPerView: 2.2,  spaceBetween: 16 },
-              768:  { slidesPerView: 2.8,  spaceBetween: 16 },
-              1024: { slidesPerView: 3.5,  spaceBetween: 20 },
-              1280: { slidesPerView: 4,    spaceBetween: 20 },
-            }}
-            style={{ padding: "4px 2px 10px" }}
-          >
-            {filtered.map((video, i) => (
-              <SwiperSlide key={i}><VideoCard video={video} /></SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-
         {/* ══ BOTTOM ══ */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 hidden">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
           <a href="https://www.youtube.com/@the_nestory" target="_blank" rel="noopener noreferrer"
             className="sm:hidden inline-flex items-center gap-2 w-full justify-center px-6 py-3 rounded-xl font-bold text-sm active:scale-[0.97] transition-all"
             style={{ background: "#FF0000", color: "#fff", boxShadow: "0 4px 18px rgba(255,0,0,0.28)" }}>
@@ -485,7 +461,7 @@ export default function YoutubeSection() {
           </a>
           <a href="https://www.youtube.com/@the_nestory" target="_blank" rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#EDE5DD] bg-white text-[#6B3A1F] font-bold text-sm shadow-[0_2px_8px_rgba(107,58,31,0.08)] hover:bg-[#6B3A1F] hover:text-white hover:border-[#6B3A1F] hover:shadow-[0_4px_16px_rgba(107,58,31,0.25)] active:scale-[0.97] transition-all duration-200">
-            View All 500+ Videos <ArrowRight size={15} />
+            View All {videos.length}+ Videos <ArrowRight size={15} />
           </a>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "rgba(107,58,31,0.06)", border: "1px solid rgba(107,58,31,0.1)" }}>

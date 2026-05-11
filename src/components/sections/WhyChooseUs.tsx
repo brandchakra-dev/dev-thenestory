@@ -24,7 +24,7 @@ const testimonials = [
 
 export default function WhyChooseUs() {
   return (
-    <section className="py-8 sm:py-6 lg:py-8 relative overflow-hidden bg-white">
+    <section className="py-12 sm:py-8 lg:py-12 relative overflow-hidden bg-white">
 
 
       {/* Decorative blobs */}
@@ -92,7 +92,7 @@ export default function WhyChooseUs() {
         </div>
 
 {/* ── Testimonials Slider ── */}
-<div className="mb-12 sm:mb-16">
+<div className="mb-12 sm:mb-16 hidden">
 
   {/* Header */}
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-7">

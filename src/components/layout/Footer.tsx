@@ -1,44 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   MapPin, Phone, Mail, Instagram, Youtube,
-  Facebook, Twitter, ArrowUpRight, ChevronRight,
+  Facebook, ArrowUpRight, ChevronRight,
   ArrowUp, Star
 } from "lucide-react";
 
-// ─── Nav Links ────────────────────────────────────────────
+// ─── API Import ────────────────────────────────────────────────
+import { citiesApi } from "@/lib/api";
+
+// ─── Types ────────────────────────────────────────────────
+interface City {
+  _id: string;
+  name: string;
+  slug: string;
+  state: string;
+  description?: string;
+  url?: string;
+  isActive: boolean;
+  sortOrder: number;
+  propertyCount?: number;
+}
+
+// ─── Nav Links (Rent Property section removed) ──────────────────
 const navGroups = [
-  {
-    title: "Buy Property",
-    links: [
-      { label: "Flats in Noida",            href: "/buy/flats-noida"           },
-      { label: "Flats in Gurugram",          href: "/buy/flats-gurugram"         },
-      { label: "Flats in Greater Noida",     href: "/buy/flats-greater-noida"    },
-      { label: "Villas & Independent Houses",href: "/buy/villas"                 },
-      { label: "Plot / Land",                href: "/buy/plots"                  },
-      { label: "New Launch Projects",        href: "/buy/new-launch"             },
-    ],
-  },
-  {
-    title: "Rent Property",
-    links: [
-      { label: "Flats for Rent in Noida",    href: "/rent/noida"                 },
-      { label: "Flats for Rent in Gurugram", href: "/rent/gurugram"              },
-      { label: "PG / Co-living",             href: "/rent/pg"                    },
-      { label: "Builder Floor",              href: "/rent/builder-floor"         },
-      { label: "Commercial Spaces",          href: "/rent/commercial"            },
-      { label: "Zero Brokerage Homes",       href: "/rent/zero-brokerage"        },
-    ],
-  },
+  // {
+  //   title: "Buy Property",
+  //   links: [
+  //     { label: "Flats in Noida",            href: "/flats-noida"           },
+  //     { label: "Flats in Gurugram",          href: "/flats-gurugram"         },
+  //     { label: "Flats in Greater Noida",     href: "/flats-greater-noida"    },
+  //     { label: "Flats in Gaziabad",     href: "/flats-gaziabad"    },
+  //     { label: "Villas & Independent Houses",href: "/villas"                 },
+  //   ],
+  // },
   {
     title: "Resources",
     links: [
-      { label: "Home Loan Calculator",       href: "/tools/home-loan"            },
-      { label: "EMI Calculator",             href: "/tools/emi"                  },
-      { label: "Property Valuation",         href: "/tools/valuation"            },
-      { label: "RERA Search",                href: "/tools/rera"                 },
+      { label: "Compare Projects",       href: "/compare-projects"            },
+      { label: "EMI Calculator",             href: "/tools/emi-calculator"   },
+      { label:"Budget Calculator",      href:"/tools/budget-calculator"},
       { label: "Blog & Guides",              href: "/blog"                       },
       { label: "YouTube Channel",            href: "https://youtube.com/@the_nestory" },
     ],
@@ -46,26 +49,16 @@ const navGroups = [
   {
     title: "Company",
     links: [
-      { label: "About The Nestory",          href: "/about"                      },
-      { label: "Our Team",                   href: "/team"                       },
-      { label: "Careers",                    href: "/careers"                    },
-      { label: "Partner with Us",            href: "/partner"                    },
-      { label: "Media & Press",              href: "/press"                      },
-      { label: "Contact Us",                 href: "/contact"                    },
+      { label: "About The Nestory",          href: "/about-us"                      },
+      { label: "Contact Us",                 href: "/contact-us"                    },
     ],
   },
 ];
 
-const cities = [
-  "Delhi", "Noida", "Greater Noida", "Gurugram",
-  "Faridabad", "Ghaziabad", "Yamuna Expressway", "Dwarka",
-];
-
 const socials = [
-  { icon: <Youtube size={16} />,   href: "https://youtube.com/@the_nestory",  label: "YouTube",   color: "#FF0000" },
-  { icon: <Instagram size={16} />, href: "https://instagram.com/the_nestory", label: "Instagram", color: "#E1306C" },
-  { icon: <Facebook size={16} />,  href: "https://facebook.com/the_nestory",  label: "Facebook",  color: "#1877F2" },
-  { icon: <Twitter size={16} />,   href: "https://twitter.com/the_nestory",   label: "Twitter",   color: "#1DA1F2" },
+  { icon: <Youtube size={16} />,   href: "https://www.youtube.com/@the_nestory",  label: "YouTube",   color: "#FF0000" },
+  { icon: <Instagram size={16} />, href: "https://www.instagram.com/the_nestory_official/", label: "Instagram", color: "#E1306C" },
+  { icon: <Facebook size={16} />,  href: "https://www.facebook.com/thenestoryllp/",  label: "Facebook",  color: "#1877F2" },
 ];
 
 // ─── ScrollToTop ──────────────────────────────────────────
@@ -90,6 +83,49 @@ function ScrollToTop() {
 // ─── Footer ───────────────────────────────────────────────
 export default function Footer() {
   const [hoveredSocial, setHoveredSocial] = useState<string | null>(null);
+  const [cities, setCities] = useState<City[]>([]);
+  const [loadingCities, setLoadingCities] = useState(true);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const response = await citiesApi.getAll();
+        
+        let citiesData = [];
+        if (response.cities) {
+          citiesData = response.cities;
+        } else if (response.data) {
+          citiesData = response.data;
+        } else if (Array.isArray(response)) {
+          citiesData = response;
+        }
+
+        // Sort by sortOrder (ascending)
+        const sortedCities = [...citiesData]
+          .filter(city => city.isActive !== false)
+          .sort((a, b) => {
+            if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+              return a.sortOrder - b.sortOrder;
+            }
+            return a.name.localeCompare(b.name);
+          });
+
+        setCities(sortedCities);
+      } catch (err) {
+        console.error("Failed to fetch cities for footer:", err);
+        // Fallback to static cities if API fails
+        const fallbackCities = [
+          "Delhi", "Noida", "Greater Noida", "Gurugram",
+          "Faridabad", "Ghaziabad", "Yamuna Expressway", "Dwarka",
+        ].map((name, index) => ({ _id: `fallback-${index}`, name, slug: name.toLowerCase().replace(/ /g, '-'), state: '', isActive: true, sortOrder: index }));
+        setCities(fallbackCities);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+
+    fetchCities();
+  }, []);
 
   return (
     <footer style={{ background: "hsl(38,45%,97%)" }}>
@@ -125,7 +161,7 @@ export default function Footer() {
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <a
-                href="tel:+919999999999"
+                href="tel:+919540311311"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm
                   transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.97]"
                 style={{
@@ -137,7 +173,7 @@ export default function Footer() {
                 <Phone size={14} /> Call Now
               </a>
               <a
-                href="/contact"
+                href="/contact-us"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm border
                   transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.97]"
                 style={{
@@ -156,7 +192,7 @@ export default function Footer() {
       {/* ══ MAIN FOOTER BODY ══ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-14 lg:pt-16 pb-8">
 
-        {/* Top row: brand col + 4 nav cols */}
+        {/* Top row: brand col + nav cols + new rating/contact col */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-12 gap-x-6 gap-y-10 mb-12 lg:mb-14">
 
           {/* ── Brand Column ── */}
@@ -186,23 +222,91 @@ export default function Footer() {
               NCR's most trusted real estate advisory. Verified listings, unbiased advice, end-to-end support.
             </p>
 
-            {/* Star rating */}
-            <div className="flex items-center gap-2 mb-6">
-              <div className="flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={12} style={{ color: "#C9A84C", fill: "#C9A84C" }} />
-                ))}
+            {/* We Serve section - DYNAMIC CITIES */}
+            <div
+              className="py-3 px-4 rounded-xl mb-5"
+              style={{
+                background: "rgba(107,58,31,0.04)",
+                border: "1px solid rgba(107,58,31,0.09)",
+              }}
+            >
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span
+                  className="font-black tracking-[0.18em] uppercase mr-1 flex-shrink-0"
+                  style={{ fontSize: "8px", color: "#6B3A1F" }}
+                >
+                  We Serve
+                </span>
+                <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+                  {loadingCities ? (
+                    // Loading skeleton for cities
+                    <>
+                      {[1, 2, 3, 4].map((i) => (
+                        <span key={i} className="inline-block w-16 h-3 bg-gray-200 rounded animate-pulse" />
+                      ))}
+                    </>
+                  ) : (
+                    cities.map((city, i) => (
+                      <span key={city._id} className="flex items-center gap-1">
+                        <a
+                          href={`/projects?city=${encodeURIComponent(city.name)}`}
+                          className="text-[10px] font-semibold transition-colors duration-200 hover:text-[#6B3A1F]"
+                          style={{ color: "#A8978A" }}
+                        >
+                          {city.name}
+                        </a>
+                        {i < cities.length - 1 && (
+                          <span style={{ color: "rgba(201,168,76,0.45)", fontSize: "8px" }}>·</span>
+                        )}
+                      </span>
+                    ))
+                  )}
+                </div>
               </div>
-              <span className="text-xs font-bold" style={{ color: "#6B3A1F" }}>4.9</span>
-              <span className="text-xs" style={{ color: "#A8978A" }}>· Google Rating</span>
             </div>
+          </div>
 
+          {/* ── Nav Columns (Buy, Resources, Company) ── */}
+          {navGroups.map((group) => (
+            <div key={group.title} className="lg:col-span-2 col-span-1">
+              <h4
+                className="font-black tracking-[0.18em] uppercase mb-4"
+                style={{ fontSize: "9px", color: "#6B3A1F" }}
+              >
+                {group.title}
+              </h4>
+              <ul className="flex flex-col gap-2.5">
+                {group.links.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link
+                      href={href}
+                      className="group inline-flex items-center gap-1.5 text-xs font-medium transition-all duration-200"
+                      style={{ color: "#7A6858" }}
+                    >
+                      <ChevronRight
+                        size={10}
+                        className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 flex-shrink-0"
+                        style={{ color: "#C9A84C" }}
+                      />
+                      <span className="group-hover:text-[#6B3A1F] transition-colors duration-200">
+                        {label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          {/* ── Rating + Contact + Social Column ── */}
+          <div className="lg:col-span-3 col-span-2">
             {/* Contact info */}
-            <div className="flex flex-col gap-3 mb-7">
+            <div className="flex flex-col gap-3 mb-6">
               {[
-                { icon: <Phone size={12} />,  text: "+91 99999 99999",          href: "tel:+919999999999"          },
-                { icon: <Mail size={12} />,   text: "hello@thenestory.in",       href: "mailto:hello@thenestory.in" },
-                { icon: <MapPin size={12} />, text: "Sector 63, Noida, UP 201301", href: "#"                        },
+                { icon: <Phone size={12} />,  text: "+91 9540 311 311",          href: "tel:+919540311311"          },
+                { icon: <Mail size={12} />,   text: "info@thenestory.in",       href: "mailto:info@thenestory.in" },
+                { icon: <MapPin size={12} />, text: "Head Office : Office No. 106 Tower D&E, Golden I, Techzone 4, Amrapali Leisure Valley, Greater Noida, Uttar Pradesh 201009", href: "Techzone 4, Amrapali Leisure Valley, Greater Noida"},
+                { icon: <MapPin size={12} />, text: "Branch Office : Plot No. 636 Ground Floor, Sector 5 Vasundhra ", href: "Plot No. 636 Ground Floor, Sector 5 Vasundhra"},
               ].map(({ icon, text, href }) => (
                 <a
                   key={text}
@@ -250,70 +354,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* ── Nav Columns ── */}
-          {navGroups.map((group) => (
-            <div key={group.title} className="lg:col-span-2 col-span-1">
-              <h4
-                className="font-black tracking-[0.18em] uppercase mb-4"
-                style={{ fontSize: "9px", color: "#6B3A1F" }}
-              >
-                {group.title}
-              </h4>
-              <ul className="flex flex-col gap-2.5">
-                {group.links.map(({ label, href }) => (
-                  <li key={label}>
-                    <Link
-                      href={href}
-                      className="group inline-flex items-center gap-1.5 text-xs font-medium transition-all duration-200"
-                      style={{ color: "#7A6858" }}
-                    >
-                      <ChevronRight
-                        size={10}
-                        className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 flex-shrink-0"
-                        style={{ color: "#C9A84C" }}
-                      />
-                      <span className="group-hover:text-[#6B3A1F] transition-colors duration-200">
-                        {label}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-
-        </div>
-
-        {/* ── Cities row ── */}
-        <div
-          className="py-5 px-5 sm:px-6 rounded-2xl mb-8"
-          style={{
-            background: "rgba(107,58,31,0.04)",
-            border: "1px solid rgba(107,58,31,0.09)",
-          }}
-        >
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-            <span
-              className="font-black tracking-[0.18em] uppercase mr-2 flex-shrink-0"
-              style={{ fontSize: "9px", color: "#6B3A1F" }}
-            >
-              We Serve
-            </span>
-            {cities.map((city, i) => (
-              <span key={city} className="flex items-center gap-2">
-                <a
-                  href={`/properties/${city.toLowerCase().replace(/ /g, "-")}`}
-                  className="text-xs font-semibold transition-colors duration-200 hover:text-[#6B3A1F]"
-                  style={{ color: "#A8978A" }}
-                >
-                  {city}
-                </a>
-                {i < cities.length - 1 && (
-                  <span style={{ color: "rgba(201,168,76,0.45)", fontSize: "10px" }}>·</span>
-                )}
-              </span>
-            ))}
-          </div>
         </div>
 
         {/* ── Bottom bar ── */}
@@ -323,7 +363,7 @@ export default function Footer() {
         >
           {/* Copyright */}
           <p className="text-[11px] font-medium text-center sm:text-left" style={{ color: "#B0A090" }}>
-            © {new Date().getFullYear()} The Nestory Realty Pvt. Ltd. · All rights reserved.
+            © {new Date().getFullYear()} Nestory Realtech LLP · All rights reserved.
           </p>
 
           {/* Legal links */}

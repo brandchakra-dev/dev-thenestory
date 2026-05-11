@@ -1,133 +1,181 @@
-"use client"
+"use client";
 
-import { useRef } from "react"
-import { Swiper, SwiperSlide } from "swiper/react"
-import { Navigation, Autoplay } from "swiper/modules"
-import { ChevronLeft, ChevronRight, ArrowRight, Scale, ArrowUpRight } from "lucide-react"
-import Image from "next/image"
+import { useState, useEffect, useRef } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Autoplay, Pagination } from "swiper/modules";
+import { ChevronLeft, ChevronRight, ArrowRight, Scale, ArrowUpRight, Building2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
-import "swiper/css"
-import "swiper/css/navigation"
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+
+import { projectsApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/url";
 
 // ─── Types ────────────────────────────────────────────────
-interface CompareSlide {
-  leftImage: string
-  rightImage: string
-  leftName: string
-  rightName: string
-  leftPrice: string
-  rightPrice: string
-  leftTag: string
-  rightTag: string
-  link: string
+interface ProjectImage {
+  _id: string;
+  url: string;
+  isPrimary: boolean;
 }
 
-// ─── Data ────────────────────────────────────────────────
-const slides: CompareSlide[] = [
-  {
-    leftImage:  "/property/compare/ace.webp",
-    rightImage: "/property/compare/irish.avif",
-    leftName:   "ACE Group",
-    rightName:  "Irish Infrastructure",
-    leftPrice:  "₹2.16 Cr*",
-    rightPrice: "₹1.32 Cr*",
-    leftTag:    "Sector 12, Noida",
-    rightTag:   "Sector 78, Gurugram",
-    link: "#",
-  },
-  {
-    leftImage:  "/property/compare/ACE-Divino.jpg",
-    rightImage: "/property/compare/crc.jpg",
-    leftName:   "ACE Divino",
-    rightName:  "CRC Joyous",
-    leftPrice:  "₹1.24 Cr*",
-    rightPrice: "₹1.3 Cr*",
-    leftTag:    "Greater Noida West",
-    rightTag:   "Noida Extension",
-    link: "#",
-  },
-  {
-    leftImage:  "/property/compare/ace.webp",
-    rightImage: "/property/compare/irish.avif",
-    leftName:   "ACE Group",
-    rightName:  "Irish Infrastructure",
-    leftPrice:  "₹2.16 Cr*",
-    rightPrice: "₹1.32 Cr*",
-    leftTag:    "Sector 12, Noida",
-    rightTag:   "Sector 78, Gurugram",
-    link: "#",
-  },
-  {
-    leftImage:  "/property/compare/ACE-Divino.jpg",
-    rightImage: "/property/compare/crc.jpg",
-    leftName:   "ACE Divino",
-    rightName:  "CRC Joyous",
-    leftPrice:  "₹1.24 Cr*",
-    rightPrice: "₹1.3 Cr*",
-    leftTag:    "Greater Noida West",
-    rightTag:   "Noida Extension",
-    link: "#",
-  },
-  {
-    leftImage:  "/property/compare/ACE-Divino.jpg",
-    rightImage: "/property/compare/crc.jpg",
-    leftName:   "ACE Divino",
-    rightName:  "CRC Joyous",
-    leftPrice:  "₹1.24 Cr*",
-    rightPrice: "₹1.3 Cr*",
-    leftTag:    "Greater Noida West",
-    rightTag:   "Noida Extension",
-    link: "#",
-  },
-]
+interface Project {
+  _id: string;
+  title: string;
+  slug: string;
+  location: string;
+  priceLabel: string;
+  status: string;
+  images: ProjectImage[];
+  propertyType: string;
+  bhk: string[];
+  builder?: { name: string; slug: string };
+  city?: { name: string; slug: string };
+  rating?: number;
+}
+
+interface CompareSlide {
+  leftId: string;
+  rightId: string;
+  leftImages: ProjectImage[];
+  rightImages: ProjectImage[];
+  leftName: string;
+  rightName: string;
+  leftPrice: string;
+  rightPrice: string;
+  leftTag: string;
+  rightTag: string;
+  leftSlug: string;
+  rightSlug: string;
+  leftBuilder: string;
+  rightBuilder: string;
+}
+
+// ─── Image Carousel Component ───────────────────────────────
+function ImageCarousel({ images, title, side }: { images: ProjectImage[]; title: string; side: "left" | "right" }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [swiperInstance, setSwiperInstance] = useState<any>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  const validImages = images.filter(img => img?.url && !failedImages.has(img._id));
+
+  if (!validImages.length) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-[#FAF7F4] to-[#EDE5DD] flex items-center justify-center">
+        <Building2 size={32} className="text-[#A8978A]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      <Swiper
+        modules={[Navigation, Autoplay, Pagination]}
+        spaceBetween={0}
+        slidesPerView={1}
+        loop={validImages.length > 1}
+        autoplay={{ delay: 3500, disableOnInteraction: false, pauseOnMouseEnter: true }}
+        pagination={{ clickable: true, dynamicBullets: true }}
+        navigation={{
+          nextEl: `.swiper-next-${side}-${title.replace(/\s/g, '-')}`,
+          prevEl: `.swiper-prev-${side}-${title.replace(/\s/g, '-')}`,
+        }}
+        onSwiper={(swiper) => setSwiperInstance(swiper)}
+        onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
+        className="w-full h-full"
+      >
+        {validImages.map((img, idx) => (
+          <SwiperSlide key={img._id || idx}>
+            <div className="relative w-full h-full">
+              <img
+                src={getImageUrl(img.url)}
+                alt={title}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            </div>
+          </SwiperSlide>
+        ))}
+      </Swiper>
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
+
+      {validImages.length > 1 && (
+        <div className="absolute top-2 right-2 z-20 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-white text-[8px] font-medium">
+          {currentIndex + 1}/{validImages.length}
+        </div>
+      )}
+
+      {validImages.length > 1 && (
+        <>
+          <button
+            className={`swiper-prev-${side}-${title.replace(/\s/g, '-')} absolute left-1 top-1/2 -translate-y-1/2 z-20
+              w-5 h-5 rounded-full bg-black/50 backdrop-blur-sm text-white 
+              flex items-center justify-center hover:bg-black/70 transition-all
+              hover:scale-110 active:scale-95`}
+          >
+            <ChevronLeft size={10} />
+          </button>
+          <button
+            className={`swiper-next-${side}-${title.replace(/\s/g, '-')} absolute right-1 top-1/2 -translate-y-1/2 z-20
+              w-5 h-5 rounded-full bg-black/50 backdrop-blur-sm text-white 
+              flex items-center justify-center hover:bg-black/70 transition-all
+              hover:scale-110 active:scale-95`}
+          >
+            <ChevronRight size={10} />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 // ─── CompareCard ─────────────────────────────────────────
 function CompareCard({ slide }: { slide: CompareSlide }) {
   return (
-    <div className="group relative bg-white rounded-2xl overflow-hidden
-      border border-[#EDE5DD]
-      shadow-[0_2px_12px_rgba(107,58,31,0.07)]
-      hover:shadow-[0_12px_40px_rgba(107,58,31,0.14)]
-      hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-
+    <Link
+      href={`/compare-projects?project1=${slide.leftSlug}&project2=${slide.rightSlug}`}
+      className="group relative bg-white rounded-2xl overflow-hidden
+        border border-[#EDE5DD]
+        shadow-[0_2px_12px_rgba(107,58,31,0.07)]
+        hover:shadow-[0_12px_40px_rgba(107,58,31,0.14)]
+        hover:-translate-y-1 transition-all duration-300 cursor-pointer block"
+    >
       {/* Top sheen */}
       <div
         className="absolute top-0 left-0 right-0 h-px z-10 pointer-events-none"
         style={{ background: "linear-gradient(90deg, transparent, rgba(201,168,76,0.4), transparent)" }}
       />
 
-      {/* ── Dual image ── */}
+      {/* ── Dual image with carousel ── */}
       <div className="relative flex h-44 sm:h-48 overflow-hidden">
 
-        {/* Left image */}
+        {/* Left image with carousel */}
         <div className="relative w-1/2 overflow-hidden">
-          <Image
-            src={slide.leftImage} alt={slide.leftName} fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+          <ImageCarousel images={slide.leftImages} title={slide.leftName} side="left" />
 
           {/* A label */}
           <div
-            className="absolute top-3 left-3 w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px]"
+            className="absolute top-2 left-2 z-20 w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px]"
             style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.35)" }}
           >
             A
           </div>
 
           {/* Left bottom info */}
-          <div className="absolute bottom-0 left-0 right-0 p-3">
+          <div className="absolute bottom-0 left-0 right-0 p-2 z-20">
             <p className="text-white font-display font-bold text-xs leading-tight line-clamp-1 drop-shadow">
               {slide.leftName}
             </p>
-            <p className="text-[10px] font-medium mt-0.5 drop-shadow" style={{ color: "rgba(255,255,255,0.6)" }}>
-              {slide.leftTag}
+            <p className="text-[9px] font-medium mt-0.5 drop-shadow" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {slide.leftBuilder}
             </p>
           </div>
         </div>
 
         {/* VS badge — centre overlap */}
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center pointer-events-none">
           <div
             className="flex items-center justify-center font-black text-[11px] transition-transform duration-300 group-hover:scale-110"
             style={{
@@ -144,29 +192,25 @@ function CompareCard({ slide }: { slide: CompareSlide }) {
           </div>
         </div>
 
-        {/* Right image */}
+        {/* Right image with carousel */}
         <div className="relative w-1/2 overflow-hidden">
-          <Image
-            src={slide.rightImage} alt={slide.rightName} fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+          <ImageCarousel images={slide.rightImages} title={slide.rightName} side="right" />
 
           {/* B label */}
           <div
-            className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px]"
+            className="absolute top-2 right-2 z-20 w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px]"
             style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.35)" }}
           >
             B
           </div>
 
           {/* Right bottom info */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 text-right">
+          <div className="absolute bottom-0 left-0 right-0 p-2 z-20 text-right">
             <p className="text-white font-display font-bold text-xs leading-tight line-clamp-1 drop-shadow">
               {slide.rightName}
             </p>
-            <p className="text-[10px] font-medium mt-0.5 drop-shadow" style={{ color: "rgba(255,255,255,0.6)" }}>
-              {slide.rightTag}
+            <p className="text-[9px] font-medium mt-0.5 drop-shadow" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {slide.rightBuilder}
             </p>
           </div>
         </div>
@@ -209,24 +253,144 @@ function CompareCard({ slide }: { slide: CompareSlide }) {
           <Scale size={11} style={{ color: "#6B3A1F", opacity: 0.6 }} />
           Side-by-side view
         </div>
-        <button className="flex items-center gap-1 text-[10px] font-bold
-          text-[#6B3A1F] hover:gap-2 transition-all duration-200">
+        <div className="flex items-center gap-1 text-[10px] font-bold text-[#6B3A1F] group-hover:gap-2 transition-all duration-200">
           Compare Now
           <ArrowRight size={10} />
-        </button>
+        </div>
       </div>
-    </div>
-  )
+    </Link>
+  );
 }
 
-// ─── CompareSection ──────────────────────────────────────
+// ─── Loading Skeleton ──────────────────────────────────────
+function LoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="bg-white rounded-2xl overflow-hidden border border-[#EDE5DD] animate-pulse">
+          <div className="h-44 bg-gray-200" />
+          <div className="p-3 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+            <div className="h-3 bg-gray-200 rounded w-3/4" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main CompareSection ──────────────────────────────────────
 export default function CompareSection() {
-  const prevRef = useRef<HTMLButtonElement>(null)
-  const nextRef = useRef<HTMLButtonElement>(null)
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  
+  const [compareSlides, setCompareSlides] = useState<CompareSlide[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProjectsForCompare = async () => {
+      try {
+        setLoading(true);
+        const response = await projectsApi.getAll({ limit: 20 });
+        
+        let projectsData: Project[] = [];
+        if (response.projects) {
+          projectsData = response.projects;
+        } else if (response.data) {
+          projectsData = response.data;
+        } else if (Array.isArray(response)) {
+          projectsData = response;
+        }
+
+        if (projectsData.length < 2) {
+          setCompareSlides([]);
+          setLoading(false);
+          return;
+        }
+
+        // Create random comparison pairs
+        const slides: CompareSlide[] = [];
+        const shuffled = [...projectsData];
+        
+        // Shuffle array for random pairs
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
+        // Create up to 6 comparison slides
+        const maxSlides = Math.min(6, Math.floor(shuffled.length / 2));
+        
+        for (let i = 0; i < maxSlides; i++) {
+          const left = shuffled[i * 2];
+          const right = shuffled[i * 2 + 1];
+          
+          if (!left || !right) continue;
+          
+          slides.push({
+            leftId: left._id,
+            rightId: right._id,
+            leftImages: left.images || [],
+            rightImages: right.images || [],
+            leftName: left.title,
+            rightName: right.title,
+            leftPrice: left.priceLabel,
+            rightPrice: right.priceLabel,
+            leftTag: left.location,
+            rightTag: right.location,
+            leftSlug: left.slug,
+            rightSlug: right.slug,
+            leftBuilder: left.builder?.name || "Top Builder",
+            rightBuilder: right.builder?.name || "Top Builder",
+          });
+        }
+        
+        setCompareSlides(slides);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch projects for compare:", err);
+        setError("Failed to load comparisons");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjectsForCompare();
+  }, []);
+
+  if (error) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <section className="py-8 sm:py-6 lg:py-8" style={{ background: "linear-gradient(135deg, hsl(38,45%,97%) 0%, hsl(34,35%,93%) 100%)" }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
+            <div>
+              <h2 className="font-display font-bold text-[#1C0F05] text-2xl sm:text-3xl lg:text-4xl leading-tight">
+                Compare{" "}
+                <span className="text-transparent bg-clip-text" style={{ backgroundImage: "linear-gradient(135deg,#6B3A1F,#C9A84C)" }}>
+                  Projects
+                </span>
+              </h2>
+              <p className="text-[#A8978A] text-sm mt-1.5 font-medium">Easily compare top properties to find your perfect match.</p>
+            </div>
+          </div>
+          <LoadingSkeleton />
+        </div>
+      </section>
+    );
+  }
+
+  if (compareSlides.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-8 sm:py-6 lg:py-8" style={{ background: "linear-gradient(135deg, hsl(38,45%,97%) 0%, hsl(34,35%,93%) 100%)" }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
@@ -248,16 +412,19 @@ export default function CompareSection() {
           </div>
 
           {/* View All — desktop */}
-          <button className="hidden sm:inline-flex items-center gap-2 self-end
-            px-5 py-2.5 rounded-xl border border-[#EDE5DD] bg-white
-            text-[#6B3A1F] font-bold text-sm
-            shadow-[0_2px_8px_rgba(107,58,31,0.08)]
-            hover:bg-[#6B3A1F] hover:text-white hover:border-[#6B3A1F]
-            hover:shadow-[0_4px_16px_rgba(107,58,31,0.25)]
-            active:scale-[0.97] transition-all duration-200 flex-shrink-0">
+          <Link
+            href="/compare-projects"
+            className="hidden sm:inline-flex items-center gap-2 self-end
+              px-5 py-2.5 rounded-xl border border-[#EDE5DD] bg-white
+              text-[#6B3A1F] font-bold text-sm
+              shadow-[0_2px_8px_rgba(107,58,31,0.08)]
+              hover:bg-[#6B3A1F] hover:text-white hover:border-[#6B3A1F]
+              hover:shadow-[0_4px_16px_rgba(107,58,31,0.25)]
+              active:scale-[0.97] transition-all duration-200 flex-shrink-0"
+          >
             View All
             <ArrowRight size={15} />
-          </button>
+          </Link>
         </div>
 
         {/* ── Carousel ── */}
@@ -311,8 +478,8 @@ export default function CompareSection() {
             }}
             style={{ padding: "4px 2px 8px" }}
           >
-            {slides.map((slide, i) => (
-              <SwiperSlide key={i}>
+            {compareSlides.map((slide, i) => (
+              <SwiperSlide key={`${slide.leftId}-${slide.rightId}-${i}`}>
                 <CompareCard slide={slide} />
               </SwiperSlide>
             ))}
@@ -321,17 +488,20 @@ export default function CompareSection() {
 
         {/* View All — mobile */}
         <div className="flex justify-center mt-6 sm:hidden">
-          <button className="inline-flex items-center gap-2
-            px-6 py-2.5 rounded-xl
-            bg-[#6B3A1F] text-white font-bold text-sm
-            shadow-[0_4px_16px_rgba(107,58,31,0.30)]
-            hover:bg-[#522C16] active:scale-[0.97] transition-all duration-200">
+          <Link
+            href="/compare-projects"
+            className="inline-flex items-center gap-2
+              px-6 py-2.5 rounded-xl
+              bg-[#6B3A1F] text-white font-bold text-sm
+              shadow-[0_4px_16px_rgba(107,58,31,0.30)]
+              hover:bg-[#522C16] active:scale-[0.97] transition-all duration-200"
+          >
             View All Projects
             <ArrowRight size={15} />
-          </button>
+          </Link>
         </div>
 
       </div>
     </section>
-  )
+  );
 }

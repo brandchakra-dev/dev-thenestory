@@ -1,88 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowUpRight, Clock, User, Tag, Search, ChevronRight, TrendingUp, Sparkles, BookOpen } from "lucide-react";
 
-// ─── Data ──────────────────────────────────────────────────
-const categories = ["All", "Market Trends", "Buying Guide", "Investment", "Legal & Finance", "NRI Corner", "New Launches"];
+import { blogsApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/url";
 
-const featuredPost = {
-  slug: "delhi-ncr-real-estate-2025",
-  title: "Delhi NCR Real Estate Outlook 2025: What Buyers Must Know Before Investing",
-  excerpt: "From rising prices in Sector 150 to the Yamuna Expressway boom — here's the complete ground-level analysis for smart buyers this year.",
-  category: "Market Trends",
-  author: "Ankit Sharma",
-  authorRole: "Senior Analyst",
-  date: "12 Jan 2025",
-  readTime: "8 min read",
-  image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80",
-  tag: "Editor's Pick",
-};
+// ─── Types ──────────────────────────────────────────────────
+interface Blog {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  author: string;
+  tags: string[];
+  coverImageUrl: string;
+  isPublished: boolean;
+  isFeatured: boolean;
+  publishedAt: string;
+  views: number;
+  createdAt: string;
+  metaTitle?: string;
+  metaDescription?: string;
+}
 
-const posts = [
-  {
-    slug: "home-loan-guide-2025",
-    title: "Complete Home Loan Guide 2025: Rates, Eligibility & Hidden Charges",
-    excerpt: "Everything you need to know before applying for a home loan — including what banks don't tell you.",
-    category: "Legal & Finance",
-    author: "Priya Nair",
-    date: "8 Jan 2025",
-    readTime: "6 min read",
-    image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80",
-  },
-  {
-    slug: "noida-vs-gurugram-investment",
-    title: "Noida vs Gurugram: Where Should You Invest in 2025?",
-    excerpt: "A data-driven comparison of Delhi NCR's two biggest micro-markets for residential investment.",
-    category: "Investment",
-    author: "Rahul Mehra",
-    date: "5 Jan 2025",
-    readTime: "5 min read",
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
-  },
-  {
-    slug: "nri-property-buying-india",
-    title: "NRI Property Buying in India: Rules, Taxes & Best Practices",
-    excerpt: "FEMA compliance, TDS rules, POA guidelines — the definitive guide for NRI buyers in 2025.",
-    category: "NRI Corner",
-    author: "Vikram Singh",
-    date: "2 Jan 2025",
-    readTime: "7 min read",
-    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
-  },
-  {
-    slug: "first-time-buyer-checklist",
-    title: "First-Time Home Buyer Checklist: 20 Things to Verify Before Signing",
-    excerpt: "Don't sign anything until you've checked these 20 critical documents, approvals and clauses.",
-    category: "Buying Guide",
-    author: "Sunita Verma",
-    date: "29 Dec 2024",
-    readTime: "9 min read",
-    image: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800&q=80",
-  },
-  {
-    slug: "yamuna-expressway-boom",
-    title: "Yamuna Expressway: India's Next Real Estate Hotspot Explained",
-    excerpt: "YEIDA plots, Film City, Jewar Airport — why smart money is flowing into this corridor right now.",
-    category: "New Launches",
-    author: "Ankit Sharma",
-    date: "26 Dec 2024",
-    readTime: "5 min read",
-    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80",
-  },
-  {
-    slug: "rera-complaints-guide",
-    title: "How to File a RERA Complaint: Step-by-Step Guide for Buyers",
-    excerpt: "Builder delays, missing amenities, title issues — here's how to use RERA to protect yourself.",
-    category: "Legal & Finance",
-    author: "Meera Patel",
-    date: "22 Dec 2024",
-    readTime: "6 min read",
-    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80",
-  },
+// ─── Categories (from backend) ──────────────────────────────
+const ALL_CATEGORIES = [
+  "All",
+  "News",
+  "Tax & Legal",
+  "Help Guides",
+  "Investment",
+  "Finance"
 ];
+
+const categoryColors: Record<string, { bg: string; text: string }> = {
+  "News":  { bg: "#EFF6FF", text: "#2563EB" },
+  "Tax & Legal":   { bg: "#F0FDF4", text: "#16A34A" },
+  "Help Guides":     { bg: "#FFFBEB", text: "#D97706" },
+  "Investment":{ bg: "#FFF1F2", text: "#E11D48" },
+  "Finance":     { bg: "#F5F3FF", text: "#7C3AED" },
+};
 
 const trendingTopics = [
   "Sector 150 Noida",
@@ -93,17 +55,22 @@ const trendingTopics = [
   "Rental Yield",
 ];
 
-const categoryColors: Record<string, { bg: string; text: string }> = {
-  "Market Trends":  { bg: "#EFF6FF", text: "#2563EB" },
-  "Buying Guide":   { bg: "#F0FDF4", text: "#16A34A" },
-  "Investment":     { bg: "#FFFBEB", text: "#D97706" },
-  "Legal & Finance":{ bg: "#FFF1F2", text: "#E11D48" },
-  "NRI Corner":     { bg: "#F5F3FF", text: "#7C3AED" },
-  "New Launches":   { bg: "#FDF8F4", text: "#6B3A1F" },
+const getReadTime = (html?: string) => {
+
+  if (!html || typeof html !== "string") {
+    return "1 min read";
+  }
+
+  const text = html.replace(/<[^>]+>/g, "");
+
+  const words = text.trim().split(/\s+/).length;
+
+  return `${Math.max(1, Math.ceil(words / 200))} min read`;
 };
 
 function CategoryBadge({ cat }: { cat: string }) {
   const c = categoryColors[cat] ?? { bg: "#F5F5F5", text: "#555" };
+
   return (
     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
       style={{ backgroundColor: c.bg, color: c.text }}>
@@ -113,7 +80,20 @@ function CategoryBadge({ cat }: { cat: string }) {
 }
 
 // ─── PostCard ──────────────────────────────────────────────
-function PostCard({ title, excerpt, category, author, date, readTime, image, slug }: typeof posts[0]) {
+function PostCard({  title,
+  excerpt,
+  category,
+  author,
+  publishedAt,
+  coverImageUrl,
+  slug,
+  content, }: Blog ) {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+
   return (
     <Link href={`/blog/${slug}`} className="group block">
       <div className="bg-white rounded-2xl overflow-hidden border border-[#EDE5DD]
@@ -123,8 +103,17 @@ function PostCard({ title, excerpt, category, author, date, readTime, image, slu
 
         {/* Image */}
         <div className="relative h-44 overflow-hidden flex-shrink-0">
-          <Image src={image} alt={title} fill unoptimized={true}
-            className="object-cover group-hover:scale-105 transition-transform duration-500" />
+          {coverImageUrl ? (
+            <img 
+              src={getImageUrl(coverImageUrl)} 
+              alt={title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#FAF7F4] to-[#EDE5DD] flex items-center justify-center">
+              <BookOpen size={32} className="text-[#A8978A]" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           <div className="absolute top-3 left-3">
             <CategoryBadge cat={category} />
@@ -141,17 +130,18 @@ function PostCard({ title, excerpt, category, author, date, readTime, image, slu
           <p className="text-[#7A6858] text-xs leading-relaxed line-clamp-2 mb-4 flex-1">{excerpt}</p>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-[#F5EFE8]">
-            <div className="flex items-center gap-1.5 text-[11px] text-[#A8978A]">
-              <User size={11} />
-              <span>{author}</span>
-              <span className="w-1 h-1 rounded-full bg-[#D4C4B0]" />
-              <Clock size={11} />
-              <span>{readTime}</span>
-            </div>
-            <ArrowUpRight size={14}
-              className="text-[#6B3A1F] opacity-0 group-hover:opacity-100
-                transition-opacity duration-200" />
+          <div className="flex items-center gap-1.5 text-[11px] text-[#A8978A]">
+            <User size={11} />
+            <span>{author || "The Nestory Team"}</span>
+
+            <span className="w-1 h-1 rounded-full bg-[#D4C4B0]" />
+
+            <Clock size={11} />
+            <span>{getReadTime(content || excerpt)}</span>
+
+            <span className="w-1 h-1 rounded-full bg-[#D4C4B0]" />
+
+            <span>{formatDate(publishedAt)}</span>
           </div>
         </div>
       </div>
@@ -159,16 +149,145 @@ function PostCard({ title, excerpt, category, author, date, readTime, image, slu
   );
 }
 
-// ─── BlogPage ──────────────────────────────────────────────
+// ─── Loading Skeleton ──────────────────────────────────────
+function LoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="bg-white rounded-2xl overflow-hidden border border-[#EDE5DD] animate-pulse">
+          <div className="h-44 bg-gray-200" />
+          <div className="p-4 space-y-3">
+            <div className="h-5 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded w-full" />
+            <div className="h-4 bg-gray-200 rounded w-2/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main BlogPage ─────────────────────────────────────────
 export default function InsightsPage() {
+  const searchParams = useSearchParams();
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [query, setQuery] = useState("");
 
-  const filtered = posts.filter(p => {
-    const matchCat = activeCategory === "All" || p.category === activeCategory;
-    const matchQ   = query === "" || p.title.toLowerCase().includes(query.toLowerCase());
-    return matchCat && matchQ;
-  });
+  // Fetch blogs from API
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        setLoading(true);
+        const response = await blogsApi.getAll({ limit: 50 });
+
+        let blogsData: Blog[] = [];
+        if (response.blogs) {
+          blogsData = response.blogs;
+        } else if (response.data) {
+          blogsData = response.data;
+        } else if (Array.isArray(response)) {
+          blogsData = response;
+        }
+        
+        setBlogs(blogsData);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch blogs:", err);
+        setError("Failed to load blog posts");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
+
+  // Read category from URL
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    if (categoryParam && ALL_CATEGORIES.includes(categoryParam)) {
+      setActiveCategory(categoryParam);
+    }
+  }, [searchParams]);
+
+  // Featured post (first featured blog or first blog)
+  const featuredPost = useMemo(() => {
+    const featured = blogs.find(b => b.isFeatured);
+    return featured || blogs[0];
+  }, [blogs]);
+
+  // Filtered posts
+  const filteredPosts = useMemo(() => {
+    let filtered = blogs.filter(b => b.isPublished !== false);
+    
+    if (activeCategory !== "All") {
+      filtered = filtered.filter(b => b.category === activeCategory);
+    }
+    if (query) {
+      filtered = filtered.filter(b => 
+        b.title.toLowerCase().includes(query.toLowerCase()) ||
+        b.excerpt?.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    // Exclude featured post from list if it's the featured one
+
+    if (
+      featuredPost &&
+      activeCategory === "All" &&
+      !query
+    ) {
+      filtered = filtered.filter(
+        b => b._id !== featuredPost._id
+      );
+    }
+    return filtered;
+  }, [blogs, activeCategory, query, featuredPost]);
+
+  // Calculate category counts
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    blogs.forEach(blog => {
+      if (blog.isPublished !== false) {
+        counts[blog.category] = (counts[blog.category] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [blogs]);
+
+  if (loading) {
+    return (
+      <main className="bg-[hsl(38,45%,97%)] min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <LoadingSkeleton />
+        </div>
+      </main>
+    );
+  }
+
+  if (error || blogs.length === 0) {
+    return (
+      <main className="bg-[hsl(38,45%,97%)] min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <BookOpen size={24} className="text-red-500" />
+          </div>
+          <h2 className="font-display font-bold text-xl text-[#1C0F05] mb-2">No blog posts found</h2>
+          <p className="text-[#A8978A] text-sm mb-6">{error || "Check back later for new articles."}</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-[#6B3A1F] text-white rounded-xl font-bold">
+            Try Again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
   return (
     <main className="bg-[hsl(38,45%,97%)] min-h-screen">
@@ -200,49 +319,66 @@ export default function InsightsPage() {
           </div>
 
           {/* Featured post — large horizontal card */}
-          <Link href={`/blog/${featuredPost.slug}`}
-            className="group block mb-0">
-            <div className="relative rounded-t-3xl overflow-hidden h-[280px] sm:h-[340px] lg:h-[400px]">
-              <Image src={featuredPost.image} alt={featuredPost.title} fill unoptimized={true}
-                className="object-cover group-hover:scale-103 transition-transform duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#1C0F05]/80 via-[#1C0F05]/40 to-transparent" />
-
-              <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 lg:p-10 max-w-2xl">
-                {/* Badges */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full
-                    bg-[#C9A84C] text-[#1C0F05] text-[10px] font-bold uppercase tracking-wide">
-                    <Sparkles size={9} /> {featuredPost.tag}
-                  </span>
-                  <CategoryBadge cat={featuredPost.category} />
-                </div>
-
-                <h2 className="font-display font-bold text-white
-                  text-xl sm:text-2xl lg:text-3xl leading-tight mb-3 line-clamp-2">
-                  {featuredPost.title}
-                </h2>
-                <p className="text-white/70 text-sm leading-relaxed mb-4 line-clamp-2 max-w-lg">
-                  {featuredPost.excerpt}
-                </p>
-
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-white/60 text-xs">
-                    <User size={12} />
-                    <span>{featuredPost.author}</span>
-                    <span>·</span>
-                    <Clock size={12} />
-                    <span>{featuredPost.readTime}</span>
-                    <span>·</span>
-                    <span>{featuredPost.date}</span>
+          {featuredPost && (
+            <Link href={`/blog/${featuredPost.slug}`}
+              className="group block mb-0">
+              <div className="relative rounded-t-3xl overflow-hidden h-[280px] sm:h-[340px] lg:h-[400px]">
+                {featuredPost.coverImageUrl ? (
+                  <img 
+                    src={getImageUrl(featuredPost.coverImageUrl)} 
+                    alt={featuredPost.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#FAF7F4] to-[#EDE5DD] flex items-center justify-center">
+                    <BookOpen size={64} className="text-[#A8978A]" />
                   </div>
-                  <div className="ml-auto flex items-center gap-1.5 text-[#C9A84C] text-xs font-bold
-                    opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    Read Article <ArrowUpRight size={13} />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#1C0F05]/80 via-[#1C0F05]/40 to-transparent" />
+
+                <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 lg:p-10 max-w-2xl">
+                  {/* Badges */}
+                  <div className="flex items-center gap-2 mb-3">
+                    {featuredPost.isFeatured && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full
+                        bg-[#C9A84C] text-[#1C0F05] text-[10px] font-bold uppercase tracking-wide">
+                        <Sparkles size={9} /> Editor's Pick
+                      </span>
+                    )}
+                    <CategoryBadge cat={featuredPost.category} />
+                  </div>
+
+                  <h2 className="font-display font-bold text-white
+                    text-xl sm:text-2xl lg:text-3xl leading-tight mb-3 line-clamp-2">
+                    {featuredPost.title}
+                  </h2>
+                  <p className="text-white/70 text-sm leading-relaxed mb-4 line-clamp-2 max-w-lg">
+                    {featuredPost.excerpt}
+                  </p>
+
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-white/60 text-xs">
+                      <User size={12} />
+                      <span>{featuredPost.author || "The Nestory Team"}</span>
+                      <span>·</span>
+                      <Clock size={12} />
+                      <span>
+                          {getReadTime(
+                            featuredPost.content || featuredPost.excerpt
+                          )}
+                        </span>
+                      <span>·</span>
+                      <span>{formatDate(featuredPost.publishedAt || featuredPost.createdAt)}</span>
+                    </div>
+                    <div className="ml-auto flex items-center gap-1.5 text-[#C9A84C] text-xs font-bold
+                      opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      Read Article <ArrowUpRight size={13} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
         </div>
       </section>
 
@@ -251,7 +387,7 @@ export default function InsightsPage() {
         shadow-[0_2px_8px_rgba(107,58,31,0.06)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 py-3 overflow-x-auto scrollbar-hide">
-            {categories.map(cat => (
+            {ALL_CATEGORIES.map(cat => (
               <button key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold
@@ -293,7 +429,7 @@ export default function InsightsPage() {
             {/* Result count */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-[#A8978A] text-xs font-medium">
-                {filtered.length} article{filtered.length !== 1 ? "s" : ""}{" "}
+                {filteredPosts.length} article{filteredPosts.length !== 1 ? "s" : ""}{" "}
                 {activeCategory !== "All" ? `in ${activeCategory}` : ""}
               </p>
               <div className="flex items-center gap-1.5 text-[10px] text-[#A8978A] font-medium">
@@ -302,10 +438,10 @@ export default function InsightsPage() {
               </div>
             </div>
 
-            {filtered.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {filtered.map((post, i) => (
-                  <PostCard key={i} {...post} />
+            {filteredPosts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+                {filteredPosts.map((post) => (
+                  <PostCard key={post._id} {...post} />
                 ))}
               </div>
             ) : (
@@ -351,9 +487,9 @@ export default function InsightsPage() {
                 <h4 className="font-display font-bold text-[#1C0F05] text-sm">Browse Categories</h4>
               </div>
               <div className="space-y-1">
-                {categories.filter(c => c !== "All").map(cat => {
-                  const count = posts.filter(p => p.category === cat).length;
-                  if (!count) return null;
+                {ALL_CATEGORIES.filter(c => c !== "All").map(cat => {
+                  const count = categoryCounts[cat] || 0;
+                  if (count === 0) return null;
                   return (
                     <button key={cat}
                       onClick={() => setActiveCategory(cat)}
@@ -400,6 +536,10 @@ export default function InsightsPage() {
         </div>
       </div>
 
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </main>
   );
 }
