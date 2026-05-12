@@ -69,11 +69,18 @@ interface FormData {
   message: string;
 }
 
+interface FormErrors {
+  name?: string;
+  email?: string;
+  phone?: string;
+  message?: string;
+}
+
 // ─── FAQ Accordion Component ─────────────────────────────────
-function FAQItem({ question, answer, isOpen, onToggle }: { 
-  question: string; 
-  answer: string; 
-  isOpen: boolean; 
+function FAQItem({ question, answer, isOpen, onToggle }: {
+  question: string;
+  answer: string;
+  isOpen: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -85,8 +92,8 @@ function FAQItem({ question, answer, isOpen, onToggle }: {
         <span className="font-display font-semibold text-[#1C0F05] group-hover:text-[#6B3A1F] transition-colors">
           {question}
         </span>
-        <ChevronRight 
-          size={16} 
+        <ChevronRight
+          size={16}
           className={`text-[#C9A84C] transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
         />
       </button>
@@ -100,35 +107,100 @@ function FAQItem({ question, answer, isOpen, onToggle }: {
 // ─── Main Contact Page ───────────────────────────────────────
 export default function Page() {
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    email: '',
-    phone: '',
-    city: '',
-    message: ''
+    name: '', email: '', phone: '', city: '', message: ''
   });
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [serverError, setServerError] = useState("");
+
   const [openFAQ, setOpenFAQ] = useState<number | null>(0);
 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error on typing
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
+    if (serverError) setServerError("");
+  };
+
+
+
+  const validate = (): boolean => {
+    const e: FormErrors = {};
+
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      e.name = "Enter your full name.";
+    }
+
+    if (!formData.email.trim()) {
+      e.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      e.email = "Enter a valid email address.";
+    }
+
+    const digits = formData.phone.replace(/\D/g, "");
+    if (!digits) {
+      e.phone = "Phone number is required.";
+    } else if (!/^\d{10}$/.test(digits)) {
+      e.phone = "Enter a valid 10-digit phone number.";
+    }
+
+    if (!formData.message.trim()) {
+      e.message = "Please enter your message.";
+    }
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    setFormData({ name: '', email: '', phone: '', city: '', message: '' });
-    
-    // Reset success message after 5 seconds
-    setTimeout(() => setIsSubmitted(false), 5000);
-  };
+    if (!validate()) return;
 
+    setIsSubmitting(true);
+    setServerError("");
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/consultations`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name.trim(),
+            mobile: formData.phone.replace(/\D/g, ""),
+            email: formData.email.trim(),
+            city: formData.city.trim(),
+            message: formData.message.trim(),
+            source: "contact-form",
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Backend field-level errors
+        if (data.errors) setErrors(data.errors);
+        setServerError(data.message || "Something went wrong.");
+        return;
+      }
+
+      setIsSubmitted(true);
+      setFormData({ name: "", email: "", phone: "", city: "", message: "" });
+      setErrors({});
+      setTimeout(() => setIsSubmitted(false), 5000);
+
+    } catch {
+      setServerError("Network error. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <main className="bg-[hsl(40,40%,97%)]">
 
@@ -166,7 +238,7 @@ export default function Page() {
       <section className="py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+
             {/* Contact Cards */}
             {contactInfo.map((info, idx) => (
               <div
@@ -205,7 +277,7 @@ export default function Page() {
       <section className="py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
+
             {/* Left - Contact Form */}
             <div
               className="rounded-2xl p-6 md:p-8"
@@ -220,59 +292,75 @@ export default function Page() {
                 <p className="text-[#7A6858] text-sm mt-1">We'll get back to you within 24 hours</p>
               </div>
 
-              {isSubmitted && (
-                <div className="mb-6 p-3 rounded-lg bg-green-50 border border-green-200 flex items-center gap-2">
-                  <CheckCircle size={16} className="text-green-600" />
-                  <span className="text-green-700 text-sm">Thank you! We'll contact you soon.</span>
-                </div>
-              )}
+              {serverError && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                    {serverError}
+                  </div>
+                )}
+
+                {isSubmitted && (
+                  <div className="mb-6 p-3 rounded-lg bg-green-50 border border-green-200 flex items-center gap-2">
+                    <CheckCircle size={16} className="text-green-600" />
+                    <span className="text-green-700 text-sm">Thank you! We'll contact you soon.</span>
+                  </div>
+                )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Name field */}
                   <div>
                     <label className="block text-[#1C0F05] text-sm font-semibold mb-1.5">Full Name *</label>
                     <input
                       type="text"
                       name="name"
-                      required
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C]"
-                      style={{ borderColor: "#EDE5DD", background: "#FAF7F4" }}
-                      placeholder="Please Enter Your Name "
+                      className={`w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C] ${errors.name ? "border-red-400 bg-red-50" : ""
+                        }`}
+                      style={!errors.name ? { borderColor: "#EDE5DD", background: "#FAF7F4" } : {}}
+                      placeholder="Please Enter Your Name"
                     />
+                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                   </div>
+
+                  {/* Email field */}
                   <div>
                     <label className="block text-[#1C0F05] text-sm font-semibold mb-1.5">Email *</label>
                     <input
                       type="email"
                       name="email"
-                      required
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C]"
-                      style={{ borderColor: "#EDE5DD", background: "#FAF7F4" }}
+                      className={`w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C] ${errors.email ? "border-red-400 bg-red-50" : ""
+                        }`}
+                      style={!errors.email ? { borderColor: "#EDE5DD", background: "#FAF7F4" } : {}}
                       placeholder="Please Enter Your Email"
                     />
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Phone field */}
                   <div>
                     <label className="block text-[#1C0F05] text-sm font-semibold mb-1.5">Phone *</label>
                     <input
                       type="tel"
                       name="phone"
-                      required
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C]"
-                      style={{ borderColor: "#EDE5DD", background: "#FAF7F4" }}
+                      className={`w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C] ${errors.phone ? "border-red-400 bg-red-50" : ""
+                        }`}
+                      style={!errors.phone ? { borderColor: "#EDE5DD", background: "#FAF7F4" } : {}}
                       placeholder="+91 9540 311 311"
+                      maxLength={15}
                     />
+                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                   </div>
+
+                  {/* City — no validation required */}
                   <div>
-                    <label className="block text-[#1C0F05] text-sm font-semibold mb-1.5">City *</label>
+                    <label className="block text-[#1C0F05] text-sm font-semibold mb-1.5">City</label>
                     <input
                       type="text"
                       name="city"
@@ -285,18 +373,21 @@ export default function Page() {
                   </div>
                 </div>
 
+               {/* Message field */}
                 <div>
                   <label className="block text-[#1C0F05] text-sm font-semibold mb-1.5">Message *</label>
                   <textarea
                     name="message"
-                    required
                     rows={4}
                     value={formData.message}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C] resize-none"
-                    style={{ borderColor: "#EDE5DD", background: "#FAF7F4" }}
+                    className={`w-full px-4 py-2.5 rounded-lg border outline-none transition-all focus:border-[#C9A84C] resize-none ${
+                      errors.message ? "border-red-400 bg-red-50" : ""
+                    }`}
+                    style={!errors.message ? { borderColor: "#EDE5DD", background: "#FAF7F4" } : {}}
                     placeholder="Tell us about your requirements..."
                   />
+                  {errors.message && <p className="text-red-500 text-xs mt-1">{errors.message}</p>}
                 </div>
 
                 <button
@@ -354,7 +445,7 @@ export default function Page() {
                   <div>
                     <h3 className="font-display font-bold text-lg text-[#1C0F05]">Head Office</h3>
                     <p className="text-[#5A4A3A] text-sm mt-1">
-                    Office No. 106 Tower D&E, Golden I, Techzone 4, Amrapali Leisure Valley, Greater Noida, Uttar Pradesh 201009
+                      Office No. 106 Tower D&E, Golden I, Techzone 4, Amrapali Leisure Valley, Greater Noida, Uttar Pradesh 201009
                     </p>
                     <a
                       href="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3503.29456238505!2d77.43268307458656!3d28.590938785969993!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cef1152dc4ccd%3A0x794c8cd1e56b078c!2sBrand%20Chakra%20LLP!5e0!3m2!1sen!2sin!4v1778053402865!5m2!1sen!2sin"

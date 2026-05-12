@@ -21,22 +21,23 @@ const chapters: Chapter[] = [
   {
     id: "founding",
     title: "Founding Story",
-    content: "The Nestory was born from a simple belief — that finding a home should be a journey of joy, not anxiety. Founded in 2018 by real estate veterans who saw firsthand how fragmented, opaque, and exhausting the home-buying process had become, we set out to build something different.\n\nWhat started as a small advisory firm in Noida has grown into NCR's most trusted real estate partner, serving over 1,800 families and facilitating transactions worth ₹2400+ crores. But our north star remains unchanged: every client deserves honest advice, complete transparency, and a partner who truly cares."
+    content: "The Nestory was born from a simple belief; that finding a home should be a journey of joy, not one of anxiety. It was founded in 2024 by real estate veterans who saw first-hand how fragmented, opaque, and exhausting the home-buying process had become, we set out to build something different. What started as a small advisory firm in Noida has grown into NCR's most trusted real estate partner, serving over 110 families and facilitating transactions worth ₹40+ crores. But our north star remains unchanged: every client deserves honest advice, complete transparency, and a partner who truly cares."
   },
   {
     id: "mission",
     title: "Our Mission",
-    content: "To democratize real estate advisory by making it transparent, unbiased, and genuinely helpful. We believe that the right home changes lives — and the right guidance makes that possible.\n\nWe're on a mission to eliminate the guesswork, the hidden agendas, and the high-pressure tactics that plague the industry. Instead, we offer clarity, expertise, and a relentless commitment to our clients' best interests."
+    content: "To democratize real estate advisory by making it transparent, unbiased, and genuinely helpful. We believe that the right home changes lives and the right guidance makes that change possible and simple. We are on a mission to eliminate the guesswork, the hidden agendas, and the high-pressure tactics that plague the industry. Instead, we offer clarity, expertise, and a relentless commitment to our clients' best interests."
   },
   {
     id: "approach",
     title: "Our Approach",
-    content: "We don't just show you properties — we become your strategic partner. Our approach combines deep market intelligence, rigorous verification of every listing, and personalized guidance tailored to your unique needs.\n\nFrom understanding your lifestyle preferences to negotiating the best deal and handholding through legal formalities, we're with you at every step. No pushy sales pitches. No hidden fees. Just honest advice that puts you first."
+    content: `We don't just show you properties, we wish to become your strategic partner. Our approach combines deep market intelligence, rigorous verification of every listing, and personalized guidance tailored to your unique needs.
+    We are here to understand your lifestyle preferences, negotiate the best deal and stay through legal formalities. We're with you at every step. No pushy sales pitches, no hidden fees, just honest advice that puts you first`
   },
   {
     id: "vision",
     title: "Our Vision",
-    content: "To become India's most loved real estate advisory platform — one where every homebuyer feels empowered, every seller finds fair value, and every transaction is built on trust.\n\nWe envision a future where real estate is transparent, accessible, and joyful. And we're building The Nestory to lead that transformation, one home at a time."
+    content: "Our goal at The Nestory is to become India's most loved real estate advisory platform. One where every homebuyer feels empowered, every seller finds fair value, and every transaction is built on trust."
   }
 ];
 
@@ -54,7 +55,7 @@ const corePillars = [
   {
     icon: <Award size={24} />,
     title: "Market Expertise",
-    description: "6+ years of deep NCR real estate knowledge at your disposal."
+    description: "2+ years of deep NCR real estate knowledge at your disposal."
   },
   {
     icon: <Clock size={24} />,
@@ -64,7 +65,7 @@ const corePillars = [
   {
     icon: <Users size={24} />,
     title: "Trusted Network",
-    description: "1800+ families have found their homes through us."
+    description: "110+ families have found their homes through us."
   },
   {
     icon: <TrendingUp size={24} />,
@@ -77,7 +78,7 @@ const leadershipTeam = [
   {
     name: "Prashant Sidhu",
     role: "Founder & CEO",
-    bio: "15+ years in real estate, former VP at leading developer. IIT Delhi alumnus.",
+    bio: "15+ years in real estate, former VP at leading developer.",
     initials: "PS"
   },
   {
@@ -95,7 +96,7 @@ const leadershipTeam = [
 ];
 
 const coreValues = [
-  { title: "Transparency", description: "No hidden fees, no misleading promises — just honest advice." },
+  { title: "Transparency", description: "No hidden fees, no misleading promises, just honest advice." },
   { title: "Excellence", description: "We hold ourselves to the highest standards in everything we do." },
   { title: "Empathy", description: "We listen, understand, and genuinely care about your journey." },
   { title: "Integrity", description: "Our reputation is built on doing the right thing, always." }
@@ -183,7 +184,7 @@ export default function Page() {
         <span className="italic block text-[#6B3A1F] mt-2">One Home at a Time</span>
       </h1>
       <p className="text-[#5A4A3A] text-lg sm:text-xl leading-relaxed mt-6 max-w-2xl">
-        NCR's most trusted real estate advisory. We've helped 1,800+ families find their perfect home with transparency, expertise, and genuine care.
+        NCR's most trusted real estate advisory. We've helped 110+ families find their perfect home with transparency, expertise, and genuine care.
       </p>
       <div className="flex flex-wrap items-center gap-4 mt-8">
         <Link
@@ -235,18 +236,18 @@ export default function Page() {
               <div className="lg:col-span-7 lg:col-start-6">
                 <div className="space-y-6">
                   <p className="text-[#5A4A3A] text-base leading-relaxed font-body">
-                    The Nestory was founded on a simple belief — that finding a home should be a journey of joy, not anxiety. In an industry riddled with opacity and conflicting interests, we set out to build something radically different: a real estate advisory that puts clients first, always.
+                  The Nestory was founded on a simple belief that believes finding a home should be a journey of joy, not anxiety. In an industry riddled with opacity and conflicting interests, we set out to build something radically different: a real estate advisory that puts clients first, always
                   </p>
                   <p className="text-[#5A4A3A] text-base leading-relaxed font-body">
-                    What started as a small team of passionate real estate professionals in Noida has grown into NCR's most trusted name in home buying. We've facilitated transactions worth over ₹2400 crores and helped 1,800+ families write their next chapter — but our approach remains refreshingly personal.
+                  What started as a small team of passionate real estate professionals in Noida has grown into NCR's most trusted name in home buying. We've facilitated transactions worth over ₹40 crores and helped 110+ families write their next chapter. Our approach remains personal and our aim is your comfort
                   </p>
                   <p className="text-[#5A4A3A] text-base leading-relaxed font-body">
-                    We don't have sales targets. We don't push properties that don't fit. We simply listen, understand, and guide you to the home that's truly right for you. Because your dream home isn't just a transaction — it's the backdrop to your life's most beautiful moments.
+                  We don't have sales targets; we don't push properties that don't fit. We simply listen, understand, and guide you to the home that's truly right for you. Because your dream home isn't just a transaction, it's the backdrop to your life's most beautiful moments.
                   </p>
                   <div className="pt-4">
                     <div className="inline-flex items-center gap-2 text-[#6B3A1F] font-semibold text-sm">
                       <span className="w-8 h-px bg-[#C9A84C]" />
-                      <span>Trusted by families across NCR</span>
+                      <span>Trusted by families across India</span>
                     </div>
                   </div>
                 </div>
@@ -260,9 +261,9 @@ export default function Page() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
               {[
-                { value: "₹100 Cr+", label: "Transaction Value" },
-                { value: "200+", label: "Happy Families" },
-                { value: "4+", label: "Years of Excellence" },
+                { value: "₹40 Cr+", label: "Transaction Value" },
+                { value: "110+", label: "Happy Families" },
+                { value: "2+", label: "Years of Excellence" },
                 { value: "100%", label: "Client Satisfaction" }
               ].map((stat, idx) => (
                 <div key={idx} className="space-y-2">
@@ -408,14 +409,14 @@ export default function Page() {
                 <div className="w-12 h-px bg-[#C9A84C] mb-6" />
                 <h2 className="font-display font-bold text-3xl sm:text-4xl mb-6" style={{ color: "#1C0F05" }}>Our Promise to You</h2>
                 <p className="text-[#5A4A3A] leading-relaxed mb-6">
-                We don't just sell homes — we build lifelong relationships. Every client who walks through our doors receives the same unwavering commitment: honest advice, complete transparency, and genuine care.
+                   At The Nestory we don't just sell homes, we build lifelong relationships. Every client who walks through our doors receives the same unwavering commitment: honest advice, complete transparency, and genuine care.
                 </p>
                 <div className="space-y-3">
                 {[
-                    "100% verified properties — no surprises",
-                    "Zero hidden fees — complete cost clarity",
-                    "End-to-end support — from search to possession",
-                    "Unbiased advice — we work for you, not developers"
+                    "100% verified properties, no surprises",
+                    "Zero hidden fees, complete cost clarity",
+                    "End-to-end support, from search to possession",
+                    "Unbiased advice, we work for you, not developers"
                 ].map((item, idx) => (
                     <div key={idx} className="flex items-center gap-3">
                     <CheckCircle size={16} className="text-[#C9A84C] flex-shrink-0" />

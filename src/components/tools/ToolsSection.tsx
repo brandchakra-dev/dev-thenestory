@@ -133,7 +133,7 @@ export default function ToolsSection() {
           <div>
             <h2 className="font-display font-bold text-[#1C0F05]
               text-2xl sm:text-3xl lg:text-4xl leading-tight">
-              TheNestory{" "}
+              The Nestory{" "}
               <span className="text-transparent bg-clip-text"
                 style={{ backgroundImage: "linear-gradient(135deg,#6B3A1F,#C9A84C)" }}>
                 Tools

@@ -510,28 +510,6 @@ export default function InsightsPage() {
               </div>
             </div>
 
-            {/* CTA card */}
-            <div className="relative rounded-2xl overflow-hidden p-5
-              bg-gradient-to-br from-[#1C0F05] via-[#3B1D0D] to-[#6B3A1F]
-              shadow-[0_8px_32px_rgba(107,58,31,0.25)]">
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full
-                border border-[#C9A84C]/15 pointer-events-none" />
-              <Sparkles size={18} className="text-[#C9A84C] mb-3" />
-              <h4 className="font-display font-bold text-white text-base mb-1.5">
-                Get Free Property Advice
-              </h4>
-              <p className="text-white/55 text-xs leading-relaxed mb-4">
-                Talk to an expert today. Zero cost, honest guidance.
-              </p>
-              <button className="w-full flex items-center justify-center gap-2
-                py-2.5 rounded-xl bg-[#C9A84C] text-[#1C0F05]
-                font-bold text-xs hover:bg-white
-                active:scale-[0.97] transition-all duration-200">
-                Book Consultation
-                <ArrowUpRight size={13} />
-              </button>
-            </div>
-
           </aside>
         </div>
       </div>

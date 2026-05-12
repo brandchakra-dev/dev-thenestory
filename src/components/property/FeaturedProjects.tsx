@@ -370,11 +370,7 @@ export default function FeaturedProjects() {
             
             <h2 className="font-display font-bold text-[#1C0F05]
               text-2xl sm:text-3xl lg:text-4xl leading-tight">
-              Featured Projects{" "}
-              <span className="text-transparent bg-clip-text"
-                style={{ backgroundImage: "linear-gradient(135deg,#6B3A1F,#C9A84C)" }}>
-                Near You
-              </span>
+              Featured Projects   
             </h2>
 
             <p className="text-[#A8978A] text-sm mt-1.5 font-medium max-w-lg">

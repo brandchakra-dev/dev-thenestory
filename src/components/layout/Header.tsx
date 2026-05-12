@@ -18,70 +18,126 @@ const navLinks = [
 
 // ─── Consultation Modal Component ──────────────────────────────
 function ConsultationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    mobile: "",
-    message: ""
-  });
+  const [formData, setFormData] = useState({ name: "", mobile: "", message: "" });
+  const [errors,   setErrors]   = useState<{ name?: string; mobile?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitted,  setIsSubmitted]  = useState(false);
+  const [serverError,  setServerError]  = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error on change
+    if (errors[name as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
+    if (serverError) setServerError("");
+  };
+
+  // ── Client-side validation ──────────────────────────────
+  const validate = () => {
+    const newErrors: { name?: string; mobile?: string } = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required.";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Enter a valid name.";
+    }
+
+    const digits = formData.mobile.replace(/\D/g, "");
+    if (!digits) {
+      newErrors.mobile = "Mobile number is required.";
+    } else if (!/^\d{10}$/.test(digits)) {
+      newErrors.mobile = "Enter a valid 10-digit mobile number.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
+
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    setServerError("");
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/consultations`,
+        {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name:    formData.name.trim(),
+            mobile:  formData.mobile.replace(/\D/g, ""),
+            message: formData.message.trim(),
+            source:  "website",
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setServerError(data.message || "Something went wrong. Please try again.");
+        return;
+      }
+
+      setIsSubmitted(true);
+      setFormData({ name: "", mobile: "", message: "" });
+
+      setTimeout(() => {
+        setIsSubmitted(false);
+        onClose();
+      }, 2500);
+
+    } catch {
+      setServerError("Network error. Please check your connection.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset on close
+  const handleClose = () => {
     setFormData({ name: "", mobile: "", message: "" });
-    
-    // Close modal after 2.5 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-      onClose();
-    }, 2500);
+    setErrors({});
+    setServerError("");
+    setIsSubmitted(false);
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={handleClose}
     >
-      <div 
+      <div
         className="relative max-w-3xl w-full rounded-xl overflow-hidden bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm flex items-center justify-center transition-all"
         >
           <X size={14} className="text-white" />
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2">
-          {/* Left Side - Image Only */}
+          {/* Left Side — unchanged */}
           <div className="relative h-56 md:h-auto overflow-hidden">
-            <img 
-              src="./modal/thenestory-consultation.png" 
+            <img
+              src="./modal/thenestory-consultation.png"
               alt="Expert Consultation"
               className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </div>
 
-          {/* Right Side - Form */}
+          {/* Right Side — Form */}
           <div className="p-5 md:p-6 bg-white">
             <div className="mb-4">
               <h2 className="font-display font-bold text-xl text-[#1C0F05]">Get Expert Advice</h2>
@@ -98,6 +154,15 @@ function ConsultationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-3">
+
+                {/* Server error */}
+                {serverError && (
+                  <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs">
+                    {serverError}
+                  </div>
+                )}
+
+                {/* Name */}
                 <div>
                   <label className="block text-[#1C0F05] text-xs font-semibold mb-1">Full Name *</label>
                   <div className="relative">
@@ -105,16 +170,21 @@ function ConsultationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                     <input
                       type="text"
                       name="name"
-                      required
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border outline-none transition-all focus:border-[#C9A84C] text-sm"
-                      style={{ borderColor: "#EDE5DD", background: "#FAF7F4" }}
+                      className={`w-full pl-9 pr-3 py-2 rounded-lg border outline-none transition-all text-sm ${
+                        errors.name
+                          ? "border-red-400 bg-red-50 focus:border-red-400"
+                          : "focus:border-[#C9A84C]"
+                      }`}
+                      style={!errors.name ? { borderColor: "#EDE5DD", background: "#FAF7F4" } : {}}
                       placeholder="Enter your full name"
                     />
                   </div>
+                  {errors.name && <p className="text-red-500 text-[10px] mt-1">{errors.name}</p>}
                 </div>
 
+                {/* Mobile */}
                 <div>
                   <label className="block text-[#1C0F05] text-xs font-semibold mb-1">Mobile Number *</label>
                   <div className="relative">
@@ -122,16 +192,22 @@ function ConsultationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                     <input
                       type="tel"
                       name="mobile"
-                      required
                       value={formData.mobile}
                       onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border outline-none transition-all focus:border-[#C9A84C] text-sm"
-                      style={{ borderColor: "#EDE5DD", background: "#FAF7F4" }}
+                      className={`w-full pl-9 pr-3 py-2 rounded-lg border outline-none transition-all text-sm ${
+                        errors.mobile
+                          ? "border-red-400 bg-red-50 focus:border-red-400"
+                          : "focus:border-[#C9A84C]"
+                      }`}
+                      style={!errors.mobile ? { borderColor: "#EDE5DD", background: "#FAF7F4" } : {}}
                       placeholder="+91 98765 43210"
+                      maxLength={15}
                     />
                   </div>
+                  {errors.mobile && <p className="text-red-500 text-[10px] mt-1">{errors.mobile}</p>}
                 </div>
 
+                {/* Message — unchanged */}
                 <div>
                   <label className="block text-[#1C0F05] text-xs font-semibold mb-1">Message (Optional)</label>
                   <div className="relative">
@@ -148,14 +224,12 @@ function ConsultationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                   </div>
                 </div>
 
+                {/* Submit — unchanged */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full py-2.5 rounded-lg font-bold text-sm transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-70 flex items-center justify-center gap-2"
-                  style={{
-                    background: "linear-gradient(135deg, #6B3A1F, #3B1D0D)",
-                    color: "#E8D5B0",
-                  }}
+                  style={{ background: "linear-gradient(135deg, #6B3A1F, #3B1D0D)", color: "#E8D5B0" }}
                 >
                   {isSubmitting ? "Sending..." : "Get Expert Advice"}
                   {!isSubmitting && <ArrowRight size={12} />}

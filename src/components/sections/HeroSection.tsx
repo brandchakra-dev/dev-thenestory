@@ -43,8 +43,8 @@ interface SearchItem {
 }
 
 const heroImages = [
-  { url: "./hero/thenestory-hero1.jpg", alt: "Luxury modern home" },
-  { url: "./hero/thenestory-hero2.jpg", alt: "Elegant living room" },
+  { url: "./hero/nestory-hero_1st_slider.webp", alt: "Luxury modern home" },
+  { url: "./hero/thenestory-hero1.jpg", alt: "Elegant living room" },
 ];
 
 type ValidationState = { type: string; message: string; hint?: string } | null;

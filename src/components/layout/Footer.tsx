@@ -156,7 +156,7 @@ export default function Footer() {
                 Free Consultation
               </p>
               <h3 className="font-display font-black text-white text-xl sm:text-2xl leading-tight">
-                Ready to find your dream home in NCR?
+                Ready to find your dream home?
               </h3>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -219,7 +219,7 @@ export default function Footer() {
 
             {/* Tagline */}
             <p className="text-sm leading-relaxed mb-6" style={{ color: "#7A6858", maxWidth: "260px" }}>
-              NCR's most trusted real estate advisory. Verified listings, unbiased advice, end-to-end support.
+              NCR's most trusted real estate advisory. We guarantee verified listings, unbiased advice, end-to-end support.
             </p>
 
             {/* We Serve section - DYNAMIC CITIES */}

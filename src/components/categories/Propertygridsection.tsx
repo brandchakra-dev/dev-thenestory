@@ -41,7 +41,7 @@ const STATIC_IMAGES = {
   allProperties: "./home-category/all_properties.jpg",
   newProjects: "./home-category/all_projects.jpg",
   budget: "./home-category/home.jpg",
-  sponsored: "./home-category/sponsered.webp",
+  sponsored: "./home-category/spon.jpg",
 };
 
 // ─── Tag Config ───────────────────────────────────────────
@@ -307,7 +307,7 @@ export default function PropertyGridSection() {
           {
             type: "sponsored",
             brand: "Elegant Stories",
-            hashtag: "#TransformYourSpace",
+            hashtag: "Each design has its story",
             headline: "story and",
             boldWord: "WIN",
             subline: "Free interior consultation worth ₹5,000",
@@ -361,7 +361,7 @@ export default function PropertyGridSection() {
           {
             type: "sponsored",
             brand: "Elegant Stories",
-            hashtag: "#TransformYourSpace",
+            hashtag: "Each design has its story",
             headline: "story and",
             boldWord: "WIN",
             subline: "Free interior consultation worth ₹5,000",
@@ -407,14 +407,14 @@ export default function PropertyGridSection() {
             className="font-display font-black text-[#1C0F05]"
             style={{ fontSize: "clamp(1.15rem, 2.8vw, 1.6rem)" }}
           >
-            We've got properties in{" "}
+            Where your dream home awaits{" "}
             <span
               className="text-transparent bg-clip-text"
               style={{ backgroundImage: "linear-gradient(135deg, #6B3A1F, #C9A84C)" }}
             >
-              NCR
-            </span>{" "}
-            for everyone
+              awaits
+            </span>
+           
           </h2>
         </div>
 

@@ -237,7 +237,7 @@ export default function BlogSection() {
               </h2>
 
               <p className="text-sm leading-relaxed mb-6" style={{ color: "#7A6858", maxWidth: "340px" }}>
-                 We list the best properties on our portal... Verified listings, direct buyer connect
+              We aim to provide a space that fits your needs and your pockets. Opening Doors to Better Living
               </p>
 
               {/* Quick stats row */}
@@ -317,7 +317,7 @@ export default function BlogSection() {
                 </h3>
 
                 <p className="text-xs leading-relaxed" style={{ color: "#A8978A" }}>
-                  From Beginner's checklists to Pro Tips — curated guides for every stage of your property journey.
+                  From Beginner's checklists to Pro Tips, find curated guides for every stage of your property journey.
                 </p>
               </div>
 
